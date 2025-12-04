@@ -1,15 +1,13 @@
 package com.ecommerce_backend.Service;
 
-import com.ecommerce_backend.Entity.Category;
-
-import java.util.List;
+import com.ecommerce_backend.Payloads.CategoryDto;
+import com.ecommerce_backend.Payloads.CategoryResponse;
 
 public interface CategoryService {
 
-    Category createCategory(Category category);
-    Category getCategoryById(String categoryId);
-    List<Category> getAllCategories();
-
-    Category updateCategory(Category newCategory);
+    CategoryDto createCategory(CategoryDto categoryDto);
+    CategoryDto getCategoryById(String categoryId);
+    CategoryResponse getAllCategories(Integer pageNumber, Integer pageSize);
+    CategoryDto updateCategory(CategoryDto newCategoryDto);
     String deleteCategory(String categoryId);
 }
