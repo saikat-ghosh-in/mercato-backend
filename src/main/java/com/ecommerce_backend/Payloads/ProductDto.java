@@ -9,10 +9,14 @@ import java.time.Instant;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class CategoryDto {
+public class ProductDto {
 
-    private String categoryId;
+    private String productId;
+    private String gtin;
     private String name;
+    private String categoryId;
+    private Double unitPrice;
+    private Double markDown;
     private String updateUser;
     private Instant updateDate;
 }

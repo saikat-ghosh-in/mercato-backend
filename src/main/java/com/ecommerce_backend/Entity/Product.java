@@ -1,13 +1,13 @@
 package com.ecommerce_backend.Entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import lombok.*;
+import jakarta.persistence.*;
+import lombok.Data;
+
+import java.time.Instant;
 
 @Data
 @Entity
-@Table(name="ecomm_product_snapshot")
+@Table(name = "ecomm_product_snapshot")
 public class Product {
 
     @Id
@@ -17,7 +17,14 @@ public class Product {
     private Double unitPrice;
     private Double markDown;
     private String updateUser;
-    private String updateDate;
+    @Column(
+            name = "update_date",
+            insertable = false,
+            updatable = false
+    )
+    private Instant updateDate;
 
-    // add many to one relation with Category
+    @ManyToOne
+    @JoinColumn(name = "category_id", nullable = false)
+    private Category category;
 }
