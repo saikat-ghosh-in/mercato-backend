@@ -1,15 +1,30 @@
 package com.ecommerce_backend.Entity;
 
-import lombok.*;
+import jakarta.persistence.*;
+import lombok.Data;
+
+import java.time.Instant;
 
 @Data
-@Builder
+@Entity
+@Table(name = "ecomm_product_snapshot")
 public class Product {
+
+    @Id
     private String productId;
     private String gtin;
-    private String description;
-    private String productCategory;
+    private String name;
     private Double unitPrice;
+    private Double markDown;
     private String updateUser;
-    private String updateDate;
+    @Column(
+            name = "update_date",
+            insertable = false,
+            updatable = false
+    )
+    private Instant updateDate;
+
+    @ManyToOne
+    @JoinColumn(name = "category_id", nullable = false)
+    private Category category;
 }

@@ -45,10 +45,8 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    public CategoryDto getCategoryById(String categoryId) {
-        Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new ResourceNotFoundException("Category", "categoryId", categoryId));
-
+    public CategoryDto getCategory(String categoryId) {
+        Category category = getCategoryById(categoryId);
         return modelMapper.map(category, CategoryDto.class);
     }
 
@@ -82,7 +80,7 @@ public class CategoryServiceImpl implements CategoryService {
         if (categoryRepository.existsByName(name)) {
             throw new ResourceAlreadyExistsException("Category", "name", name);
         }
-        getCategoryById(newCategoryDto.getCategoryId()); // throws ResourceNotFoundException
+        this.getCategory(newCategoryDto.getCategoryId()); // throws ResourceNotFoundException
 
         Category newCategory = modelMapper.map(newCategoryDto, Category.class);
         Category savedCategory = categoryRepository.save(newCategory);
@@ -92,7 +90,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public String deleteCategory(String categoryId) {
-        CategoryDto existingCategoryDto = getCategoryById(categoryId); // throws ResourceNotFoundException
+        CategoryDto existingCategoryDto = this.getCategory(categoryId); // throws ResourceNotFoundException
         Category existingCategory = modelMapper.map(existingCategoryDto, Category.class);
         categoryRepository.delete(existingCategory);
 
@@ -100,5 +98,14 @@ public class CategoryServiceImpl implements CategoryService {
             throw new IllegalStateException("Deletion failed for: " + categoryId);
         }
         return "Category deleted successfully";
+    }
+
+    @Override
+    public Category getCategoryById(String categoryId) {
+        if (categoryId == null || categoryId.isBlank()) {
+            throw new IllegalArgumentException("categoryId must not be null or blank");
+        }
+        return categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Category", "categoryId", categoryId));
     }
 }
