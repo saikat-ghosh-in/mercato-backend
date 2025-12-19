@@ -8,4 +8,5 @@ import org.springframework.stereotype.Repository;
 public interface ProductRepository extends JpaRepository<Product, String> {
 
     boolean existsByGtin(String gtin);
+    Product findByGtin(String gtin);
 }
