@@ -14,6 +14,7 @@ public class Product {
     private String productId;
     private String gtin;
     private String name;
+    private String imagePath;
     private Double unitPrice;
     private Double markDown;
     private String updateUser;

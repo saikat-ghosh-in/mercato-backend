@@ -1,7 +1,9 @@
 package com.ecommerce_backend.Service;
 
 import com.ecommerce_backend.Payloads.ProductDto;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 public interface ProductService {
@@ -15,4 +17,6 @@ public interface ProductService {
     ProductDto updateProduct(ProductDto productDto);
 
     void deleteProduct(String productId);
+
+    ProductDto uploadProductImage(String productId, MultipartFile image) throws IOException;
 }

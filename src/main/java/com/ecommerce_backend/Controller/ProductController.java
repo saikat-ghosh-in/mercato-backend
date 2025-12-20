@@ -6,7 +6,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -43,5 +45,12 @@ public class ProductController {
     public ResponseEntity<String> deleteProduct(@PathVariable String productId) {
         productService.deleteProduct(productId);
         return new ResponseEntity<>("Product deleted successfully", HttpStatus.OK);
+    }
+
+    @PutMapping("/uploadImage/{productId}")
+    public ResponseEntity<ProductDto> uploadProductImage(@PathVariable String productId,
+                                                         @RequestParam("image") MultipartFile image) throws IOException {
+        ProductDto productDto = productService.uploadProductImage(productId, image);
+        return new ResponseEntity<>(productDto, HttpStatus.OK);
     }
 }

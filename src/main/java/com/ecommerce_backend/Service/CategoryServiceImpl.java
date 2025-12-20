@@ -1,6 +1,5 @@
 package com.ecommerce_backend.Service;
 
-
 import com.ecommerce_backend.Entity.*;
 import com.ecommerce_backend.ExceptionHandler.*;
 import com.ecommerce_backend.Payloads.CategoryDto;
@@ -13,6 +12,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
@@ -26,40 +26,30 @@ public class CategoryServiceImpl implements CategoryService {
 
 
     @Override
+    @Transactional
     public CategoryDto createCategory(CategoryDto categoryDto) {
-        String categoryId = categoryDto.getCategoryId();
-        String name = categoryDto.getName();
-        if (categoryRepository.existsById(categoryId)) {
-            throw new ResourceAlreadyExistsException("Category", "categoryId", categoryId);
-        } else if (categoryRepository.existsByName(name)) {
-            throw new ResourceAlreadyExistsException("Category", "name", name);
-        }
+        validateFields(categoryDto); // throws
+        validateIfAlreadyExists(categoryDto); // throws
 
-        Category category = modelMapper.map(categoryDto, Category.class);
-        categoryRepository.save(category);
+        Category category = new Category();
+        category.setCategoryId(categoryDto.getCategoryId());
+        category.setName(categoryDto.getName());
+        category.setUpdateUser(categoryDto.getUpdateUser());
 
-        Category savedCategory = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new IllegalStateException("Creation failed for: " + categoryId));
-
+        Category savedCategory = categoryRepository.save(category);
         return modelMapper.map(savedCategory, CategoryDto.class);
     }
 
     @Override
-    public CategoryDto getCategory(String categoryId) {
-        Category category = getCategoryById(categoryId);
-        return modelMapper.map(category, CategoryDto.class);
-    }
-
-    @Override
+    @Transactional(readOnly = true)
     public CategoryResponse getAllCategories(Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder) {
         Sort sort = sortingOrder.equalsIgnoreCase("asc")
                 ? Sort.by(sortBy).ascending()
                 : Sort.by(sortBy).descending();
-
         Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sort);
+
         Page<Category> categoryPage = categoryRepository.findAll(pageDetails);
         List<Category> categories = categoryPage.getContent();
-
         List<CategoryDto> categoryDtoList = categories.stream()
                 .map(category -> modelMapper.map(category, CategoryDto.class))
                 .toList();
@@ -75,29 +65,35 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    public CategoryDto updateCategory(CategoryDto newCategoryDto) {
-        String name = newCategoryDto.getName();
-        if (categoryRepository.existsByName(name)) {
+    public CategoryDto getCategory(String categoryId) {
+        Category category = getCategoryById(categoryId);
+        return modelMapper.map(category, CategoryDto.class);
+    }
+
+    @Override
+    @Transactional
+    public CategoryDto updateCategory(CategoryDto categoryDto) {
+        validateFields(categoryDto);
+
+        String name = categoryDto.getName();
+        Category categoryByName = categoryRepository.findByName(name);
+        if (categoryByName != null && !categoryByName.getCategoryId().equals(categoryDto.getCategoryId())) {
             throw new ResourceAlreadyExistsException("Category", "name", name);
         }
-        this.getCategory(newCategoryDto.getCategoryId()); // throws ResourceNotFoundException
 
-        Category newCategory = modelMapper.map(newCategoryDto, Category.class);
-        Category savedCategory = categoryRepository.save(newCategory);
+        Category category = getCategoryById(categoryDto.getCategoryId()); // throws
+        category.setName(name);
+        category.setUpdateUser(categoryDto.getUpdateUser());
 
+        Category savedCategory = categoryRepository.save(category);
         return modelMapper.map(savedCategory, CategoryDto.class);
     }
 
     @Override
-    public String deleteCategory(String categoryId) {
-        CategoryDto existingCategoryDto = this.getCategory(categoryId); // throws ResourceNotFoundException
-        Category existingCategory = modelMapper.map(existingCategoryDto, Category.class);
-        categoryRepository.delete(existingCategory);
-
-        if (categoryRepository.existsById(categoryId)) {
-            throw new IllegalStateException("Deletion failed for: " + categoryId);
-        }
-        return "Category deleted successfully";
+    @Transactional
+    public void deleteCategory(String categoryId) {
+        Category category = getCategoryById(categoryId); // throws
+        categoryRepository.delete(category);
     }
 
     @Override
@@ -107,5 +103,26 @@ public class CategoryServiceImpl implements CategoryService {
         }
         return categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "categoryId", categoryId));
+    }
+
+    private void validateFields(CategoryDto categoryDto) {
+        String categoryId = categoryDto.getCategoryId();
+        String name = categoryDto.getName();
+        if (categoryId == null || categoryId.isBlank()) {
+            throw new IllegalArgumentException("categoryId must not be null or blank");
+        }
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("name must not be null or blank");
+        }
+    }
+
+    private void validateIfAlreadyExists(CategoryDto categoryDto) {
+        String categoryId = categoryDto.getCategoryId();
+        String name = categoryDto.getName();
+        if (categoryRepository.existsById(categoryId)) {
+            throw new ResourceAlreadyExistsException("Category", "categoryId", categoryId);
+        } else if (categoryRepository.existsByName(name)) {
+            throw new ResourceAlreadyExistsException("Category", "name", name);
+        }
     }
 }

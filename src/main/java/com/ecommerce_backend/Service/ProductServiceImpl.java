@@ -6,22 +6,32 @@ import com.ecommerce_backend.ExceptionHandler.ResourceAlreadyExistsException;
 import com.ecommerce_backend.ExceptionHandler.ResourceNotFoundException;
 import com.ecommerce_backend.Payloads.ProductDto;
 import com.ecommerce_backend.Repository.ProductRepository;
+import com.ecommerce_backend.Utils.FileService;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 @Service
 public class ProductServiceImpl implements ProductService {
 
+    @Value("${images.folderPath}")
+    private String imagesFolderPath;
     @Autowired
     private ProductRepository productRepository;
     @Autowired
     private ModelMapper modelMapper;
     @Autowired
     private CategoryService categoryService;
+    @Autowired
+    private FileService fileService;
+
 
     @Override
     @Transactional
@@ -59,7 +69,6 @@ public class ProductServiceImpl implements ProductService {
         return modelMapper.map(product, ProductDto.class);
     }
 
-
     @Override
     @Transactional
     public ProductDto updateProduct(ProductDto productDto) {
@@ -86,12 +95,22 @@ public class ProductServiceImpl implements ProductService {
         return modelMapper.map(saved, ProductDto.class);
     }
 
-
     @Override
     @Transactional
     public void deleteProduct(String productId) {
         Product product = getProductById(productId);
         productRepository.delete(product);
+    }
+
+    @Override
+    public ProductDto uploadProductImage(String productId, MultipartFile image) throws IOException {
+        Product product = getProductById(productId);
+
+        String imageFilePath = fileService.uploadProductImage(imagesFolderPath, image, productId);
+        product.setImagePath(imageFilePath);
+
+        Product saved = productRepository.save(product);
+        return modelMapper.map(saved, ProductDto.class);
     }
 
 
