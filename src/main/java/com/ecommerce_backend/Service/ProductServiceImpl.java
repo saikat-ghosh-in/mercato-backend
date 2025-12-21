@@ -108,7 +108,16 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional
     public ProductDto uploadProductImage(String productId, MultipartFile image) throws IOException {
+        if (image == null || image.isEmpty()) {
+            throw new IllegalArgumentException("Image file must not be empty");
+        }
+        long maxSize = 100 * 1024; // 100 KB
+        if (image.getSize() > maxSize) {
+            throw new IllegalArgumentException("Image size must not exceed 100 KB");
+        }
+
         Product product = getProductById(productId);
 
         String imageFilePath = fileService.uploadProductImage(productsImageFolder, image, productId);
