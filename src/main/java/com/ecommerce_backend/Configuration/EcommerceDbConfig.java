@@ -19,11 +19,6 @@ public class EcommerceDbConfig {
 
     @Bean
     public HikariDataSource dataSource(DataSourceProperties dsp) {
-
-        dsp.setUrl("jdbc:postgresql://localhost:5099/ecommerce_project");
-        dsp.setUsername("postgres");
-        dsp.setPassword("postgresql#SG1999");
-
         return dsp.initializeDataSourceBuilder()
                 .type(HikariDataSource.class)
                 .build();
