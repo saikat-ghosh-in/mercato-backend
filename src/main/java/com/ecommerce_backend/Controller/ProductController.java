@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/products")
@@ -27,9 +26,9 @@ public class ProductController {
 
     @GetMapping
     public ResponseEntity<ProductResponse> getAllProducts(@RequestParam(defaultValue = AppConstants.PAGE_NUMBER) Integer pageNumber,
-                                                           @RequestParam(defaultValue = AppConstants.PAGE_SIZE) Integer pageSize,
-                                                           @RequestParam(defaultValue = AppConstants.SORT_PRODUCTS_BY) String sortBy,
-                                                           @RequestParam(defaultValue = AppConstants.SORTING_ORDER) String sortingOrder) {
+                                                          @RequestParam(defaultValue = AppConstants.PAGE_SIZE) Integer pageSize,
+                                                          @RequestParam(defaultValue = AppConstants.SORT_PRODUCTS_BY) String sortBy,
+                                                          @RequestParam(defaultValue = AppConstants.SORTING_ORDER) String sortingOrder) {
         ProductResponse productResponse = productService.getProducts(pageNumber, pageSize, sortBy, sortingOrder);
         return new ResponseEntity<>(productResponse, HttpStatus.OK);
     }
@@ -57,5 +56,25 @@ public class ProductController {
                                                          @RequestParam("image") MultipartFile image) throws IOException {
         ProductDto productDto = productService.uploadProductImage(productId, image);
         return new ResponseEntity<>(productDto, HttpStatus.OK);
+    }
+
+    @GetMapping("/searchByCategoryId/{categoryId}")
+    public ResponseEntity<ProductResponse> getProductsByCategory(@PathVariable String categoryId,
+                                                                 @RequestParam(defaultValue = AppConstants.PAGE_NUMBER) Integer pageNumber,
+                                                                 @RequestParam(defaultValue = AppConstants.PAGE_SIZE) Integer pageSize,
+                                                                 @RequestParam(defaultValue = AppConstants.SORT_PRODUCTS_BY) String sortBy,
+                                                                 @RequestParam(defaultValue = AppConstants.SORTING_ORDER) String sortingOrder) {
+        ProductResponse productResponse = productService.getProductsByCategory(categoryId, pageNumber, pageSize, sortBy, sortingOrder);
+        return new ResponseEntity<>(productResponse, HttpStatus.OK);
+    }
+
+    @GetMapping("/searchByKeyword/{keyword}")
+    public ResponseEntity<ProductResponse> getProductsByKeyword(@PathVariable String keyword,
+                                                                @RequestParam(defaultValue = AppConstants.PAGE_NUMBER) Integer pageNumber,
+                                                                @RequestParam(defaultValue = AppConstants.PAGE_SIZE) Integer pageSize,
+                                                                @RequestParam(defaultValue = AppConstants.SORT_PRODUCTS_BY) String sortBy,
+                                                                @RequestParam(defaultValue = AppConstants.SORTING_ORDER) String sortingOrder) {
+        ProductResponse productResponse = productService.getProductsByKeyword(keyword, pageNumber, pageSize, sortBy, sortingOrder);
+        return new ResponseEntity<>(productResponse, HttpStatus.OK);
     }
 }

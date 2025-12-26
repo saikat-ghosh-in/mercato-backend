@@ -74,7 +74,7 @@ public class ProductServiceImpl implements ProductService {
         Page<Product> productsPage = productRepository.findAll(pageDetails);
         List<Product> products = productsPage.getContent();
         List<ProductDto> productDtoList = products.stream()
-                .map(category -> modelMapper.map(category, ProductDto.class))
+                .map(product -> modelMapper.map(product, ProductDto.class))
                 .toList();
 
         return ProductResponse.builder()
@@ -145,6 +145,55 @@ public class ProductServiceImpl implements ProductService {
 
         Product saved = productRepository.save(product);
         return modelMapper.map(saved, ProductDto.class);
+    }
+
+    @Override
+    public ProductResponse getProductsByCategory(String categoryId, Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder) {
+
+        Category category = categoryService.getCategoryById(categoryId);
+
+        Sort sort = sortingOrder.equalsIgnoreCase("asc")
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+        Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sort);
+
+        Page<Product> productsPage = productRepository.findByCategory(pageDetails, category);
+        List<Product> products = productsPage.getContent();
+        List<ProductDto> productDtoList = products.stream()
+                .map(product -> modelMapper.map(product, ProductDto.class))
+                .toList();
+
+        return ProductResponse.builder()
+                .content(productDtoList)
+                .pageNumber(productsPage.getNumber())
+                .pageSize(productsPage.getSize())
+                .totalElements(productsPage.getTotalElements())
+                .totalPages(productsPage.getTotalPages())
+                .lastPage(productsPage.isLast())
+                .build();
+    }
+
+    @Override
+    public ProductResponse getProductsByKeyword(String keyword, Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder) {
+        Sort sort = sortingOrder.equalsIgnoreCase("asc")
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+        Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sort);
+
+        Page<Product> productsPage = productRepository.findByKeyword(keyword, pageDetails);
+        List<Product> products = productsPage.getContent();
+        List<ProductDto> productDtoList = products.stream()
+                .map(product -> modelMapper.map(product, ProductDto.class))
+                .toList();
+
+        return ProductResponse.builder()
+                .content(productDtoList)
+                .pageNumber(productsPage.getNumber())
+                .pageSize(productsPage.getSize())
+                .totalElements(productsPage.getTotalElements())
+                .totalPages(productsPage.getTotalPages())
+                .lastPage(productsPage.isLast())
+                .build();
     }
 
 
