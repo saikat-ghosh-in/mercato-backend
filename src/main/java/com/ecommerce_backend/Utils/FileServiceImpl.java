@@ -13,7 +13,7 @@ import java.nio.file.StandardCopyOption;
 public class FileServiceImpl implements FileService {
 
     @Override
-    public String uploadProductImage(String imagesFolderPath, MultipartFile productImage, String productId) throws IOException {
+    public String uploadProductImage(String imagesFolderPath, MultipartFile productImage, Long productId) throws IOException {
 
         String originalName = productImage.getOriginalFilename();
         String extension = "";

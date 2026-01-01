@@ -1,10 +1,11 @@
 package com.ecommerce_backend.Service;
 
-import com.ecommerce_backend.Entity.*;
-import com.ecommerce_backend.ExceptionHandler.*;
+import com.ecommerce_backend.Entity.Category;
+import com.ecommerce_backend.ExceptionHandler.ResourceAlreadyExistsException;
+import com.ecommerce_backend.ExceptionHandler.ResourceNotFoundException;
 import com.ecommerce_backend.Payloads.CategoryDto;
 import com.ecommerce_backend.Payloads.CategoryResponse;
-import com.ecommerce_backend.Repository.*;
+import com.ecommerce_backend.Repository.CategoryRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -14,7 +15,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.List;
 
 @Service
 public class CategoryServiceImpl implements CategoryService {
@@ -32,8 +33,7 @@ public class CategoryServiceImpl implements CategoryService {
         validateIfAlreadyExists(categoryDto); // throws
 
         Category category = new Category();
-        category.setCategoryId(categoryDto.getCategoryId());
-        category.setName(categoryDto.getName());
+        category.setCategoryName(categoryDto.getCategoryName());
         category.setUpdateUser(categoryDto.getUpdateUser());
 
         Category savedCategory = categoryRepository.save(category);
@@ -65,7 +65,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    public CategoryDto getCategory(String categoryId) {
+    public CategoryDto getCategory(Long categoryId) {
         Category category = getCategoryById(categoryId);
         return modelMapper.map(category, CategoryDto.class);
     }
@@ -73,16 +73,16 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional
     public CategoryDto updateCategory(CategoryDto categoryDto) {
-        validateFields(categoryDto);
+        validateFields(categoryDto); // throws
 
-        String name = categoryDto.getName();
-        Category categoryByName = categoryRepository.findByName(name);
+        String categoryName = categoryDto.getCategoryName();
+        Category categoryByName = categoryRepository.findByCategoryName(categoryName);
         if (categoryByName != null && !categoryByName.getCategoryId().equals(categoryDto.getCategoryId())) {
-            throw new ResourceAlreadyExistsException("Category", "name", name);
+            throw new ResourceAlreadyExistsException("Category", "categoryName", categoryName);
         }
 
         Category category = getCategoryById(categoryDto.getCategoryId()); // throws
-        category.setName(name);
+        category.setCategoryName(categoryName);
         category.setUpdateUser(categoryDto.getUpdateUser());
 
         Category savedCategory = categoryRepository.save(category);
@@ -91,38 +91,31 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
-    public void deleteCategory(String categoryId) {
+    public void deleteCategory(Long categoryId) {
         Category category = getCategoryById(categoryId); // throws
         categoryRepository.delete(category);
     }
 
     @Override
-    public Category getCategoryById(String categoryId) {
-        if (categoryId == null || categoryId.isBlank()) {
-            throw new IllegalArgumentException("categoryId must not be null or blank");
+    public Category getCategoryById(Long categoryId) {
+        if (categoryId == null) {
+            throw new IllegalArgumentException("categoryId must not be null");
         }
         return categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "categoryId", categoryId));
     }
 
     private void validateFields(CategoryDto categoryDto) {
-        String categoryId = categoryDto.getCategoryId();
-        String name = categoryDto.getName();
-        if (categoryId == null || categoryId.isBlank()) {
-            throw new IllegalArgumentException("categoryId must not be null or blank");
-        }
-        if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("name must not be null or blank");
+        String categoryName = categoryDto.getCategoryName();
+        if (categoryName == null || categoryName.isBlank()) {
+            throw new IllegalArgumentException("categoryName must not be null or blank");
         }
     }
 
     private void validateIfAlreadyExists(CategoryDto categoryDto) {
-        String categoryId = categoryDto.getCategoryId();
-        String name = categoryDto.getName();
-        if (categoryRepository.existsById(categoryId)) {
-            throw new ResourceAlreadyExistsException("Category", "categoryId", categoryId);
-        } else if (categoryRepository.existsByName(name)) {
-            throw new ResourceAlreadyExistsException("Category", "name", name);
+        String categoryName = categoryDto.getCategoryName();
+        if (categoryRepository.existsByCategoryName(categoryName)) {
+            throw new ResourceAlreadyExistsException("Category", "categoryName", categoryName);
         }
     }
 }

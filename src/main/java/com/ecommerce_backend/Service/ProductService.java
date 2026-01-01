@@ -2,26 +2,25 @@ package com.ecommerce_backend.Service;
 
 import com.ecommerce_backend.Payloads.ProductDto;
 import com.ecommerce_backend.Payloads.ProductResponse;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 
 public interface ProductService {
 
-    ProductDto addProduct(ProductDto productDto);
+    ProductDto addProduct(Long categoryId, ProductDto productDto);
 
     ProductResponse getProducts(Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder);
 
-    ProductDto getProduct(String productId);
+    ProductDto getProduct(Long productId);
 
     ProductDto updateProduct(ProductDto productDto);
 
-    void deleteProduct(String productId);
+    void deleteProduct(Long productId);
 
-    ProductDto uploadProductImage(String productId, MultipartFile image) throws IOException;
+    ProductDto uploadProductImage(Long productId, MultipartFile image) throws IOException;
 
-    ProductResponse getProductsByCategory(String categoryId, Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder);
+    ProductResponse getProductsByCategory(Long categoryId, Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder);
 
     ProductResponse getProductsByKeyword(String keyword, Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder);
 }

@@ -6,5 +6,5 @@ import java.io.IOException;
 
 public interface FileService {
 
-    String uploadProductImage(String imagesFolderPath, MultipartFile productImage, String productId) throws IOException;
+    String uploadProductImage(String imagesFolderPath, MultipartFile productImage, Long productId) throws IOException;
 }

@@ -8,13 +8,13 @@ public interface CategoryService {
 
     CategoryDto createCategory(CategoryDto categoryDto);
 
-    CategoryDto getCategory(String categoryId);
+    CategoryDto getCategory(Long categoryId);
 
     CategoryResponse getAllCategories(Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder);
 
     CategoryDto updateCategory(CategoryDto newCategoryDto);
 
-    void deleteCategory(String categoryId);
+    void deleteCategory(Long categoryId);
 
-    Category getCategoryById(String categoryId);
+    Category getCategoryById(Long categoryId);
 }

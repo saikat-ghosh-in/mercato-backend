@@ -11,12 +11,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-//@Entity
-//@Table(name = "users",
-//        uniqueConstraints = {
-//                @UniqueConstraint(columnNames = "username"),
-//                @UniqueConstraint(columnNames = "email")
-//        })
+@Entity
+@Table(name = "ecomm_users",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = "username"),
+                @UniqueConstraint(columnNames = "email")
+        })
 @Data
 @Builder
 @NoArgsConstructor

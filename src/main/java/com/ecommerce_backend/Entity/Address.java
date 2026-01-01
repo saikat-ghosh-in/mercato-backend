@@ -11,8 +11,8 @@ import lombok.ToString;
 import java.util.ArrayList;
 import java.util.List;
 
-//@Entity
-//@Table(name = "addresses")
+@Entity
+@Table(name = "addresses")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
