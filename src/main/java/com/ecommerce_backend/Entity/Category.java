@@ -2,7 +2,10 @@ package com.ecommerce_backend.Entity;
 
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
 import java.util.List;
@@ -11,18 +14,20 @@ import java.util.List;
 @Entity
 @Table(name = "ecomm_category_snapshot")
 public class Category {
-
     @Id
-    private String categoryId;
-    private String name;
-    private String updateUser;
-    @Column(
-            name = "update_date",
-            insertable = false,
-            updatable = false
-    )
-    private Instant updateDate;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long categoryId;
 
-    @OneToMany(mappedBy = "category")
+    @NotBlank
+    @Size(min = 4, message = "Category name must be more than 3 characters")
+    private String categoryName;
+
+    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL)
     private List<Product> products;
+
+    private String updateUser;
+
+    @UpdateTimestamp
+    @Column(name = "update_date", columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private Instant updateDate;
 }

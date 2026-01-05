@@ -15,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -42,21 +43,19 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public ProductDto addProduct(ProductDto productDto) {
+    public ProductDto addProduct(Long categoryId, ProductDto productDto) {
 
-        validateFields(productDto); // throws
         validateIfAlreadyExists(productDto); // throws
-        Category category = categoryService.getCategoryById(productDto.getCategoryId()); // throws
+        Category category = categoryService.getCategoryById(categoryId); // throws
 
         Product product = new Product();
-        product.setProductId(productDto.getProductId());
-        product.setGtin(productDto.getGtin());
-        product.setName(productDto.getName());
-        product.setDescription(productDto.getDescription());
+        product.setProductName(productDto.getProductName());
         product.setImagePath(Paths.get(productsImageFolder, placeholderImageName).toString());
-        product.setUnitPrice(productDto.getUnitPrice());
-        product.setMarkDown(productDto.getMarkDown());
-        product.setUpdateUser(productDto.getUpdateUser());
+        product.setDescription(productDto.getDescription());
+        product.setQuantity(productDto.getQuantity());
+        product.setRetailPrice(productDto.getRetailPrice());
+        product.setDiscount(productDto.getDiscount());
+        product.setSpecialPrice(getDiscountedPrice(productDto.getRetailPrice(), productDto.getDiscount()));
         product.setCategory(category);
 
         Product saved = productRepository.save(product);
@@ -88,7 +87,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public ProductDto getProduct(String productId) {
+    public ProductDto getProduct(Long productId) {
         Product product = getProductById(productId);
         return modelMapper.map(product, ProductDto.class);
     }
@@ -98,22 +97,14 @@ public class ProductServiceImpl implements ProductService {
     public ProductDto updateProduct(ProductDto productDto) {
 
         Product product = getProductById(productDto.getProductId()); // throws
-        validateFields(productDto);
-
-        String gtin = productDto.getGtin(); // check if another product with provided gtin exists
-        Product productByGtin = productRepository.findByGtin(gtin);
-        if (productByGtin != null && !productByGtin.getProductId().equals(productDto.getProductId())) {
-            throw new ResourceAlreadyExistsException("Product", "gtin", gtin);
-        }
-
         Category category = categoryService.getCategoryById(productDto.getCategoryId()); // throws
 
-        product.setGtin(gtin);
-        product.setName(productDto.getName());
+        product.setProductName(productDto.getProductName());
         product.setDescription(productDto.getDescription());
-        product.setUnitPrice(productDto.getUnitPrice());
-        product.setMarkDown(productDto.getMarkDown());
-        product.setUpdateUser(productDto.getUpdateUser());
+        product.setQuantity(productDto.getQuantity());
+        product.setRetailPrice(productDto.getRetailPrice());
+        product.setDiscount(productDto.getDiscount());
+        product.setSpecialPrice(getDiscountedPrice(productDto.getRetailPrice(), productDto.getDiscount()));
         product.setCategory(category);
 
         Product saved = productRepository.save(product);
@@ -122,14 +113,15 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public void deleteProduct(String productId) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public void deleteProduct(Long productId) {
         Product product = getProductById(productId);
         productRepository.delete(product);
     }
 
     @Override
     @Transactional
-    public ProductDto uploadProductImage(String productId, MultipartFile image) throws IOException {
+    public ProductDto uploadProductImage(Long productId, MultipartFile image) throws IOException {
         if (image == null || image.isEmpty()) {
             throw new IllegalArgumentException("Image file must not be empty");
         }
@@ -148,7 +140,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public ProductResponse getProductsByCategory(String categoryId, Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder) {
+    public ProductResponse getProductsByCategory(Long categoryId, Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder) {
 
         Category category = categoryService.getCategoryById(categoryId);
 
@@ -196,34 +188,22 @@ public class ProductServiceImpl implements ProductService {
                 .build();
     }
 
+    private double getDiscountedPrice(double retailPrice, double discount) {
+        return retailPrice - ((discount * 0.01) * retailPrice);
+    }
 
-    private Product getProductById(String productId) {
-        if (productId == null || productId.isBlank()) {
-            throw new IllegalArgumentException("productId must not be null or blank!");
+    private Product getProductById(Long productId) {
+        if (productId == null) {
+            throw new IllegalArgumentException("productId must not be null!");
         }
         return productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
     }
 
-    private void validateFields(ProductDto productDto) {
-        String productId = productDto.getProductId();
-        String gtin = productDto.getGtin();
-        if (productId == null || productId.isBlank()) {
-            throw new IllegalArgumentException("productId must not be null or blank");
-        }
-        if (gtin == null || gtin.isBlank()) {
-            throw new IllegalArgumentException("gtin must not be null or blank");
-        }
-    }
-
     private void validateIfAlreadyExists(ProductDto productDto) {
-        String productId = productDto.getProductId();
-        String gtin = productDto.getGtin();
+        Long productId = productDto.getProductId();
         if (productRepository.existsById(productId)) {
             throw new ResourceAlreadyExistsException("Product", "productId", productId);
-        }
-        if (productRepository.existsByGtin(gtin)) {
-            throw new ResourceAlreadyExistsException("Product", "gtin", gtin);
         }
     }
 }

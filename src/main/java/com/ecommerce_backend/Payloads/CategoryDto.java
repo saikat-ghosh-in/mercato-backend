@@ -11,8 +11,8 @@ import java.time.Instant;
 @AllArgsConstructor
 public class CategoryDto {
 
-    private String categoryId;
-    private String name;
+    private Long categoryId;
+    private String categoryName;
     private String updateUser;
     private Instant updateDate;
 }

@@ -11,14 +11,14 @@ import java.time.Instant;
 @AllArgsConstructor
 public class ProductDto {
 
-    private String productId;
-    private String gtin;
-    private String name;
-    private String description;
+    private Long productId;
+    private String productName;
+    private Long categoryId;
     private String imagePath;
-    private String categoryId;
-    private Double unitPrice;
-    private Double markDown;
-    private String updateUser;
+    private String description;
+    private Integer quantity;
+    private double retailPrice;
+    private double discount;
+    private double specialPrice;
     private Instant updateDate;
 }
