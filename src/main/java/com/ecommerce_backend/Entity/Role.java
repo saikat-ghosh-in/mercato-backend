@@ -7,7 +7,12 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 @Entity
-@Table(name = "roles")
+@Table(
+        name = "roles",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = "role_name")
+        }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -22,4 +27,8 @@ public class Role {
     @Enumerated(EnumType.STRING)
     @Column(length = 20, name = "role_name")
     private AppRole roleName;
+
+    public Role(AppRole roleName) {
+        this.roleName = roleName;
+    }
 }

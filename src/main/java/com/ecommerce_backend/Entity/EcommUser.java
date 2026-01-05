@@ -11,6 +11,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static jakarta.persistence.CascadeType.*;
+
 @Entity
 @Table(name = "ecomm_users",
         uniqueConstraints = {
@@ -43,19 +45,21 @@ public class EcommUser {
     @Column(name = "password")
     private String password;
 
-    @Setter
-    @Getter
-    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.EAGER)
-    @JoinTable(name = "user_role", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "user_role",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
     private Set<Role> roles = new HashSet<>();
 
-    @Getter
-    @Setter
-    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
-    @JoinTable(name = "user_address", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "address_id"))
-    private List<Address> addresses = new ArrayList<>();
+    @OneToMany(mappedBy = "user", cascade = ALL, orphanRemoval = true)
+    private List<Address> addresses;
 
-    @ToString.Exclude
-    @OneToMany(mappedBy = "user", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, orphanRemoval = true)
+    @OneToMany(
+            mappedBy = "user",
+            cascade = {PERSIST, MERGE},
+            orphanRemoval = true
+    )
     private Set<Product> products;
 }

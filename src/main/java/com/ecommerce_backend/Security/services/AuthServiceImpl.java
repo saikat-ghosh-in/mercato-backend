@@ -11,6 +11,9 @@ import com.ecommerce_backend.Security.payloads.LoginRequest;
 import com.ecommerce_backend.Security.payloads.SignupRequest;
 import com.ecommerce_backend.Security.payloads.UserInfoResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -22,6 +25,7 @@ import org.springframework.stereotype.Service;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -37,7 +41,7 @@ public class AuthServiceImpl implements AuthService {
     private PasswordEncoder encoder;
 
     @Override
-    public UserInfoResponse authenticateUser(LoginRequest loginRequest) {
+    public ResponseEntity<UserInfoResponse> authenticateUser(LoginRequest loginRequest) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         loginRequest.getUsername(),
@@ -46,18 +50,20 @@ public class AuthServiceImpl implements AuthService {
         );
         SecurityContextHolder.getContext().setAuthentication(authentication);
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        String jwtToken = jwtUtils.generateTokenFromUsername(userDetails);
+        ResponseCookie jwtCookie = jwtUtils.generateJwtCookie(userDetails);
 
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .toList();
+        UserInfoResponse response = UserInfoResponse.builder()
+                .userId(userDetails.getUserId())
+                .username(userDetails.getUsername())
+                .roles(roles)
+                .build();
 
-        return new UserInfoResponse(
-                userDetails.getId(),
-                userDetails.getUsername(),
-                roles,
-                jwtToken
-        );
+        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE,
+                        jwtCookie.toString())
+                .body(response);
     }
 
     @Override
@@ -88,6 +94,36 @@ public class AuthServiceImpl implements AuthService {
         userRepository.save(user);
 
         return "User registered successfully!";
+    }
+
+    @Override
+    public String getUsernameFromAuthentication(Authentication authentication) {
+        if (authentication != null)
+            return authentication.getName();
+        return "Guest";
+    }
+
+    @Override
+    public UserInfoResponse getUserDetailsFromAuthentication(Authentication authentication) {
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+
+        List<String> roles = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toList());
+
+        return UserInfoResponse.builder()
+                .userId(userDetails.getUserId())
+                .username(userDetails.getUsername())
+                .roles(roles)
+                .build();
+    }
+
+    @Override
+    public ResponseEntity<?> signOutCurrentUser() {
+        ResponseCookie cleanCookie = jwtUtils.getCleanJwtCookie();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cleanCookie.toString())
+                .body("You have been signed out!");
     }
 
     private void throwIfAnExistingUser(String username, String email) {

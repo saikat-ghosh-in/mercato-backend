@@ -22,7 +22,7 @@ public class UserDetailsImpl implements UserDetails {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    private Long id;
+    private Long userId;
     private String username;
     private String email;
     @JsonIgnore
@@ -63,6 +63,6 @@ public class UserDetailsImpl implements UserDetails {
         if (this == obj) return true;
         if (obj == null || getClass() != obj.getClass()) return false;
         UserDetailsImpl user = (UserDetailsImpl) obj;
-        return Objects.equals(id, user.id);
+        return Objects.equals(userId, user.userId);
     }
 }
