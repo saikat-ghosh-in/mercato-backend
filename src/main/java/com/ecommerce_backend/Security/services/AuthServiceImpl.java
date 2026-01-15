@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -97,15 +98,25 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public String getUsernameFromAuthentication(Authentication authentication) {
-        if (authentication != null)
+    public String getCurrentUsernameFromAuthentication() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated())
             return authentication.getName();
         return "Guest";
     }
 
     @Override
-    public UserInfoResponse getUserDetailsFromAuthentication(Authentication authentication) {
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+    public UserInfoResponse getCurrentUserFromAuthentication() {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new AccessDeniedException("User is not authenticated");
+        }
+
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof UserDetailsImpl userDetails)) {
+            throw new IllegalStateException("Unexpected principal type: " + principal.getClass());
+        }
 
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -114,9 +125,11 @@ public class AuthServiceImpl implements AuthService {
         return UserInfoResponse.builder()
                 .userId(userDetails.getUserId())
                 .username(userDetails.getUsername())
+                .email(userDetails.getEmail())
                 .roles(roles)
                 .build();
     }
+
 
     @Override
     public ResponseEntity<?> signOutCurrentUser() {

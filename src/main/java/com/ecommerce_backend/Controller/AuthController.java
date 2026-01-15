@@ -46,13 +46,13 @@ public class AuthController {
 
     @GetMapping("/username")
     public ResponseEntity<String> getUsernameFromAuthentication(Authentication authentication) {
-        String username = authService.getUsernameFromAuthentication(authentication);
+        String username = authService.getCurrentUsernameFromAuthentication();
         return ResponseEntity.ok(username);
     }
 
     @GetMapping("/user")
-    public ResponseEntity<?> getUserDetailsFromAuthentication(Authentication authentication) {
-        UserInfoResponse username = authService.getUserDetailsFromAuthentication(authentication);
+    public ResponseEntity<?> getCurrentUserFromAuthentication() {
+        UserInfoResponse username = authService.getCurrentUserFromAuthentication();
         return ResponseEntity.ok(username);
     }
 

@@ -24,25 +24,30 @@ import static jakarta.persistence.CascadeType.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class EcommUser {
+
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "user_id")
+    @GeneratedValue(
+            strategy = GenerationType.SEQUENCE,
+            generator = "user_seq"
+    )
+    @SequenceGenerator(
+            name = "user_seq",
+            sequenceName = "user_seq",
+            allocationSize = 10
+    )
     private Long userId;
 
     @NotBlank
     @Size(max = 20)
-    @Column(name = "username")
     private String username;
 
     @NotBlank
     @Size(max = 100)
     @Email
-    @Column(name = "email")
     private String email;
 
     @NotBlank
     @Size(max = 120)
-    @Column(name = "password")
     private String password;
 
     @ManyToMany(fetch = FetchType.EAGER)

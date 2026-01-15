@@ -8,7 +8,6 @@ import com.ecommerce_backend.Payloads.ProductDto;
 import com.ecommerce_backend.Payloads.ProductResponse;
 import com.ecommerce_backend.Repository.ProductRepository;
 import com.ecommerce_backend.Utils.FileService;
-import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -29,14 +28,16 @@ public class ProductServiceImpl implements ProductService {
 
     @Value("${images.products.folder}")
     private String productsImageFolder;
+
     @Value("${images.products.placeholder}")
     private String placeholderImageName;
+
     @Autowired
     private ProductRepository productRepository;
-    @Autowired
-    private ModelMapper modelMapper;
+
     @Autowired
     private CategoryService categoryService;
+
     @Autowired
     private FileService fileService;
 
@@ -54,12 +55,11 @@ public class ProductServiceImpl implements ProductService {
         product.setDescription(productDto.getDescription());
         product.setQuantity(productDto.getQuantity());
         product.setRetailPrice(productDto.getRetailPrice());
-        product.setDiscount(productDto.getDiscount());
-        product.setSpecialPrice(getDiscountedPrice(productDto.getRetailPrice(), productDto.getDiscount()));
+        product.setDiscountPercent(productDto.getDiscountPercent());
         product.setCategory(category);
 
-        Product saved = productRepository.save(product);
-        return modelMapper.map(saved, ProductDto.class);
+        Product savedProduct = productRepository.save(product);
+        return getProductDto(savedProduct);
     }
 
     @Override
@@ -73,7 +73,7 @@ public class ProductServiceImpl implements ProductService {
         Page<Product> productsPage = productRepository.findAll(pageDetails);
         List<Product> products = productsPage.getContent();
         List<ProductDto> productDtoList = products.stream()
-                .map(product -> modelMapper.map(product, ProductDto.class))
+                .map(this::getProductDto)
                 .toList();
 
         return ProductResponse.builder()
@@ -89,7 +89,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public ProductDto getProduct(Long productId) {
         Product product = getProductById(productId);
-        return modelMapper.map(product, ProductDto.class);
+        return getProductDto(product);
     }
 
     @Override
@@ -103,12 +103,11 @@ public class ProductServiceImpl implements ProductService {
         product.setDescription(productDto.getDescription());
         product.setQuantity(productDto.getQuantity());
         product.setRetailPrice(productDto.getRetailPrice());
-        product.setDiscount(productDto.getDiscount());
-        product.setSpecialPrice(getDiscountedPrice(productDto.getRetailPrice(), productDto.getDiscount()));
+        product.setDiscountPercent(productDto.getDiscountPercent());
         product.setCategory(category);
 
-        Product saved = productRepository.save(product);
-        return modelMapper.map(saved, ProductDto.class);
+        Product savedProduct = productRepository.save(product);
+        return getProductDto(savedProduct);
     }
 
     @Override
@@ -135,8 +134,8 @@ public class ProductServiceImpl implements ProductService {
         String imageFilePath = fileService.uploadProductImage(productsImageFolder, image, productId);
         product.setImagePath(imageFilePath);
 
-        Product saved = productRepository.save(product);
-        return modelMapper.map(saved, ProductDto.class);
+        Product savedProduct = productRepository.save(product);
+        return getProductDto(savedProduct);
     }
 
     @Override
@@ -152,7 +151,7 @@ public class ProductServiceImpl implements ProductService {
         Page<Product> productsPage = productRepository.findByCategory(pageDetails, category);
         List<Product> products = productsPage.getContent();
         List<ProductDto> productDtoList = products.stream()
-                .map(product -> modelMapper.map(product, ProductDto.class))
+                .map(this::getProductDto)
                 .toList();
 
         return ProductResponse.builder()
@@ -175,7 +174,7 @@ public class ProductServiceImpl implements ProductService {
         Page<Product> productsPage = productRepository.findByKeyword(keyword, pageDetails);
         List<Product> products = productsPage.getContent();
         List<ProductDto> productDtoList = products.stream()
-                .map(product -> modelMapper.map(product, ProductDto.class))
+                .map(this::getProductDto)
                 .toList();
 
         return ProductResponse.builder()
@@ -188,16 +187,40 @@ public class ProductServiceImpl implements ProductService {
                 .build();
     }
 
-    private double getDiscountedPrice(double retailPrice, double discount) {
-        return retailPrice - ((discount * 0.01) * retailPrice);
-    }
-
-    private Product getProductById(Long productId) {
+    @Override
+    public Product getProductById(Long productId) {
         if (productId == null) {
             throw new IllegalArgumentException("productId must not be null!");
         }
         return productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
+    }
+
+    @Override
+    public void updateProductInventory(Long productId, Integer newQuantity) {
+
+        if (newQuantity == null || newQuantity < 0) {
+            throw new IllegalArgumentException("Quantity must be a non-negative Integer.");
+        }
+
+        Product product = getProductById(productId);
+        product.setQuantity(newQuantity);
+        productRepository.save(product);
+    }
+
+    private ProductDto getProductDto(Product product) {
+        return new ProductDto(
+                product.getProductId(),
+                product.getProductName(),
+                product.getCategory().getCategoryId(),
+                product.getImagePath(),
+                product.getDescription(),
+                product.getQuantity(),
+                product.getRetailPrice(),
+                product.getDiscountPercent(),
+                product.getSellingPrice(),
+                product.getUpdateDate()
+        );
     }
 
     private void validateIfAlreadyExists(ProductDto productDto) {
