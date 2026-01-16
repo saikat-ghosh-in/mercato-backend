@@ -48,4 +48,9 @@ public class CategoryController {
         categoryService.deleteCategory(categoryId);
         return new ResponseEntity<>("Category deleted successfully", HttpStatus.OK);
     }
+
+    @GetMapping("/addDummyCategories")
+    public ResponseEntity<String> addDummyCategories() {
+        return new ResponseEntity<>(categoryService.addDummyCategories(), HttpStatus.CREATED);
+    }
 }

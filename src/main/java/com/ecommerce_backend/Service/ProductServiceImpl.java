@@ -1,12 +1,15 @@
 package com.ecommerce_backend.Service;
 
 import com.ecommerce_backend.Entity.Category;
+import com.ecommerce_backend.Entity.EcommUser;
 import com.ecommerce_backend.Entity.Product;
 import com.ecommerce_backend.ExceptionHandler.ResourceAlreadyExistsException;
 import com.ecommerce_backend.ExceptionHandler.ResourceNotFoundException;
 import com.ecommerce_backend.Payloads.ProductDto;
 import com.ecommerce_backend.Payloads.ProductResponse;
+import com.ecommerce_backend.Repository.CategoryRepository;
 import com.ecommerce_backend.Repository.ProductRepository;
+import com.ecommerce_backend.Security.services.UserDetailsServiceImpl;
 import com.ecommerce_backend.Utils.FileService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,7 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -37,6 +42,12 @@ public class ProductServiceImpl implements ProductService {
 
     @Autowired
     private CategoryService categoryService;
+
+    @Autowired
+    private CategoryRepository categoryRepository;
+
+    @Autowired
+    private UserDetailsServiceImpl userDetailsService;
 
     @Autowired
     private FileService fileService;
@@ -206,6 +217,39 @@ public class ProductServiceImpl implements ProductService {
         Product product = getProductById(productId);
         product.setQuantity(newQuantity);
         productRepository.save(product);
+    }
+
+    @Override
+    @Transactional
+    public String addDummyProducts() {
+
+        EcommUser seller = userDetailsService.getUserByUsername("seller1"); // throws
+
+        List<Category> categories = categoryRepository.findAll();
+        if (categories.isEmpty()) {
+            throw new RuntimeException("No categories found");
+        }
+
+        List<Product> products = new ArrayList<>();
+
+        for (int i = 1; i <= 40; i++) {
+            Category category = categories.get(i % categories.size());
+
+            Product p = new Product();
+            p.setProductName("Dummy Product " + i);
+            p.setDescription("This is a dummy description for product " + i);
+            p.setImagePath(null); // fallback logic will handle this
+            p.setQuantity(10 + i);
+            p.setRetailPrice(new BigDecimal(500 + (i * 25)));
+            p.setDiscountPercent(new BigDecimal(i % 20)); // 0–19%
+            p.setCategory(category);
+            p.setUser(seller);
+
+            products.add(p);
+        }
+
+        productRepository.saveAll(products);
+        return "success";
     }
 
     private ProductDto getProductDto(Product product) {

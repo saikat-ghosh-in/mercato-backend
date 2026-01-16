@@ -27,6 +27,7 @@ public class Cart {
     @SequenceGenerator(
             name = "cart_seq",
             sequenceName = "cart_seq",
+            initialValue = 70000001,
             allocationSize = 10
     )
     private Long cartId;

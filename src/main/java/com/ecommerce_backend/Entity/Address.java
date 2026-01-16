@@ -13,8 +13,18 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Address {
+
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(
+            strategy = GenerationType.SEQUENCE,
+            generator = "address_seq"
+    )
+    @SequenceGenerator(
+            name = "address_seq",
+            sequenceName = "address_seq",
+            initialValue = 50000001,
+            allocationSize = 10
+    )
     private Long addressId;
 
     @NotBlank

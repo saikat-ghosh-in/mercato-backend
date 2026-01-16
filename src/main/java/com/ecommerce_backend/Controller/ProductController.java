@@ -79,4 +79,9 @@ public class ProductController {
         ProductResponse productResponse = productService.getProductsByKeyword(keyword, pageNumber, pageSize, sortBy, sortingOrder);
         return new ResponseEntity<>(productResponse, HttpStatus.OK);
     }
+
+    @GetMapping("/addDummyProducts")
+    public ResponseEntity<String> addDummyProducts() {
+        return new ResponseEntity<>(productService.addDummyProducts(), HttpStatus.CREATED);
+    }
 }

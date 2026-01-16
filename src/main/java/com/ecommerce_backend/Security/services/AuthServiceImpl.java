@@ -22,6 +22,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.List;
@@ -59,6 +60,7 @@ public class AuthServiceImpl implements AuthService {
         UserInfoResponse response = UserInfoResponse.builder()
                 .userId(userDetails.getUserId())
                 .username(userDetails.getUsername())
+                .email(userDetails.getEmail())
                 .roles(roles)
                 .build();
 
@@ -68,6 +70,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional
     public String registerNewUser(SignupRequest signUpRequest) {
         throwIfAnExistingUser(signUpRequest.getUsername(), signUpRequest.getEmail()); // throws
 
@@ -137,6 +140,80 @@ public class AuthServiceImpl implements AuthService {
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cleanCookie.toString())
                 .body("You have been signed out!");
+    }
+
+    @Override
+    @Transactional
+    public String addDummyUsers() {
+        Role userRole = roleRepository.findByRoleName(AppRole.ROLE_USER)
+                .orElseGet(() -> {
+                    Role newUserRole = new Role(AppRole.ROLE_USER);
+                    return roleRepository.save(newUserRole);
+                });
+
+        Role sellerRole = roleRepository.findByRoleName(AppRole.ROLE_SELLER)
+                .orElseGet(() -> {
+                    Role newSellerRole = new Role(AppRole.ROLE_SELLER);
+                    return roleRepository.save(newSellerRole);
+                });
+
+        Role adminRole = roleRepository.findByRoleName(AppRole.ROLE_ADMIN)
+                .orElseGet(() -> {
+                    Role newAdminRole = new Role(AppRole.ROLE_ADMIN);
+                    return roleRepository.save(newAdminRole);
+                });
+
+        Set<Role> userRoles = new HashSet<>(Set.of(getRoleByRoleName(AppRole.ROLE_USER)));
+        Set<Role> sellerRoles = new HashSet<>(Set.of(getRoleByRoleName(AppRole.ROLE_SELLER)));
+        Set<Role> adminRoles = new HashSet<>(Set.of(getRoleByRoleName(AppRole.ROLE_USER),
+                getRoleByRoleName(AppRole.ROLE_SELLER),
+                getRoleByRoleName(AppRole.ROLE_ADMIN)));
+
+
+        // Create users if not already present
+        if (!userRepository.existsByUsername("user1")) {
+            EcommUser user1 = EcommUser.builder()
+                    .username("user1")
+                    .email("user1@example.com")
+                    .password(encoder.encode("password1"))
+                    .build();
+            userRepository.save(user1);
+        }
+
+        if (!userRepository.existsByUsername("seller1")) {
+            EcommUser seller1 = EcommUser.builder()
+                    .username("seller1")
+                    .email("seller1@example.com")
+                    .password(encoder.encode("password2"))
+                    .build();
+            userRepository.save(seller1);
+        }
+
+        if (!userRepository.existsByUsername("admin")) {
+            EcommUser admin = EcommUser.builder()
+                    .username("admin")
+                    .email("admin@example.com")
+                    .password(encoder.encode("adminPass"))
+                    .build();
+            userRepository.save(admin);
+        }
+
+        // Update roles for existing users
+        userRepository.findByUsername("user1").ifPresent(user -> {
+            user.setRoles(userRoles);
+            userRepository.save(user);
+        });
+
+        userRepository.findByUsername("seller1").ifPresent(seller -> {
+            seller.setRoles(sellerRoles);
+            userRepository.save(seller);
+        });
+
+        userRepository.findByUsername("admin").ifPresent(admin -> {
+            admin.setRoles(adminRoles);
+            userRepository.save(admin);
+        });
+        return "success";
     }
 
     private void throwIfAnExistingUser(String username, String email) {

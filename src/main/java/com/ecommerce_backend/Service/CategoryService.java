@@ -17,4 +17,6 @@ public interface CategoryService {
     void deleteCategory(Long categoryId);
 
     Category getCategoryById(Long categoryId);
+
+    String addDummyCategories();
 }

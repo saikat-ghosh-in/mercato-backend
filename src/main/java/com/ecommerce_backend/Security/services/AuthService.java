@@ -16,4 +16,6 @@ public interface AuthService {
     UserInfoResponse getCurrentUserFromAuthentication();
 
     ResponseEntity<?> signOutCurrentUser();
+
+    String addDummyUsers();
 }

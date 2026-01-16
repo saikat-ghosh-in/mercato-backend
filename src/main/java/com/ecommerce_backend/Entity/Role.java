@@ -19,8 +19,16 @@ import lombok.ToString;
 public class Role {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "role_id")
+    @GeneratedValue(
+            strategy = GenerationType.SEQUENCE,
+            generator = "role_seq"
+    )
+    @SequenceGenerator(
+            name = "role_seq",
+            sequenceName = "role_seq",
+            initialValue = 20000001,
+            allocationSize = 10
+    )
     private Integer roleId;
 
     @ToString.Exclude

@@ -23,6 +23,7 @@ public class Category {
     @SequenceGenerator(
             name = "category_seq",
             sequenceName = "category_seq",
+            initialValue = 40000001,
             allocationSize = 10
     )
     private Long categoryId;

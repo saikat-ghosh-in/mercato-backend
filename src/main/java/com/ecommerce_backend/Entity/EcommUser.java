@@ -33,6 +33,7 @@ public class EcommUser {
     @SequenceGenerator(
             name = "user_seq",
             sequenceName = "user_seq",
+            initialValue = 10000001,
             allocationSize = 10
     )
     private Long userId;

@@ -60,4 +60,9 @@ public class AuthController {
     public ResponseEntity<?> signOutCurrentUser() {
         return authService.signOutCurrentUser();
     }
+
+    @GetMapping("/addDummyUsers")
+    public String addDummyUsers() {
+        return authService.addDummyUsers();
+    }
 }
