@@ -9,9 +9,11 @@ public interface CartService {
 
     List<CartDto> getAllCarts();
 
-    CartDto getCart(String emailId, Long cartId);
+    CartDto getCartByEmail(String email);
 
-    CartDto updateProductQuantityInCart(Long productId, Integer quantity);
+    CartDto updateProductQuantityInCart(Long productId, Integer newQuantity);
 
     void deleteProductFromCart(Long cartId, Long productId);
+
+    void deleteCart(Long cartId);
 }

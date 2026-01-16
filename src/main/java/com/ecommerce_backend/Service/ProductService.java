@@ -27,7 +27,7 @@ public interface ProductService {
 
     Product getProductById(Long productId);
 
-    void updateProductInventory(Long productId, Integer newQuantity);
+    ProductDto updateProductInventory(Long productId, Integer newQuantity);
 
     String addDummyProducts();
 }

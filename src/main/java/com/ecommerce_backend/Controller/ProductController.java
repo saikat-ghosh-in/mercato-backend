@@ -80,6 +80,13 @@ public class ProductController {
         return new ResponseEntity<>(productResponse, HttpStatus.OK);
     }
 
+    @PostMapping("/admin/products/{productId}/newQuantity/{newQuantity}")
+    public ResponseEntity<ProductDto> getProductsByKeyword(@PathVariable Long productId,
+                                                                @PathVariable Integer newQuantity) {
+        ProductDto productDto = productService.updateProductInventory(productId, newQuantity);
+        return new ResponseEntity<>(productDto, HttpStatus.OK);
+    }
+
     @GetMapping("/addDummyProducts")
     public ResponseEntity<String> addDummyProducts() {
         return new ResponseEntity<>(productService.addDummyProducts(), HttpStatus.CREATED);

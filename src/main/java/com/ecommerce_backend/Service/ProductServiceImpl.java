@@ -208,7 +208,8 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public void updateProductInventory(Long productId, Integer newQuantity) {
+    @Transactional
+    public ProductDto updateProductInventory(Long productId, Integer newQuantity) {
 
         if (newQuantity == null || newQuantity < 0) {
             throw new IllegalArgumentException("Quantity must be a non-negative Integer.");
@@ -216,7 +217,8 @@ public class ProductServiceImpl implements ProductService {
 
         Product product = getProductById(productId);
         product.setQuantity(newQuantity);
-        productRepository.save(product);
+        Product savedProduct = productRepository.save(product);
+        return getProductDto(savedProduct);
     }
 
     @Override
@@ -238,7 +240,7 @@ public class ProductServiceImpl implements ProductService {
             Product p = new Product();
             p.setProductName("Dummy Product " + i);
             p.setDescription("This is a dummy description for product " + i);
-            p.setImagePath(null); // fallback logic will handle this
+            p.setImagePath(Paths.get(productsImageFolder, placeholderImageName).toString());
             p.setQuantity(10 + i);
             p.setRetailPrice(new BigDecimal(500 + (i * 25)));
             p.setDiscountPercent(new BigDecimal(i % 20)); // 0–19%
