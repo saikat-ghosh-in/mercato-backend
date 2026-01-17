@@ -51,7 +51,7 @@ public class Cart {
     @Transient
     public BigDecimal getSubtotal() {
         return cartItems.stream()
-                .map(CartItem::getItemPrice)
+                .map(CartItem::getLineTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 

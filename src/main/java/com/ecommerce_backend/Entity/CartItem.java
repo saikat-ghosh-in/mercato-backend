@@ -41,15 +41,17 @@ public class CartItem {
     @Column(nullable = false)
     private Integer quantity;
 
-    @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal itemPrice;
+    @Transient
+    public BigDecimal getItemPrice() {
+        return product.getSellingPrice();
+    }
 
     @Transient
     public BigDecimal getLineTotal() {
-        if (quantity == null || itemPrice == null) {
+        if (quantity == null) {
             return BigDecimal.ZERO;
         }
-        return itemPrice
+        return getItemPrice()
                 .multiply(BigDecimal.valueOf(quantity))
                 .setScale(2, RoundingMode.HALF_UP);
     }
