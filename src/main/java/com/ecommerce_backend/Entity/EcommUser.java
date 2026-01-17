@@ -59,13 +59,42 @@ public class EcommUser {
     )
     private Set<Role> roles = new HashSet<>();
 
-    @OneToMany(mappedBy = "user", cascade = ALL, orphanRemoval = true)
-    private List<Address> addresses;
+    @OneToMany(
+            mappedBy = "user",
+            cascade = ALL,
+            orphanRemoval = true
+    )
+    @Builder.Default
+    private List<Address> addresses = new ArrayList<>();
 
     @OneToMany(
             mappedBy = "user",
-            cascade = {PERSIST, MERGE},
-            orphanRemoval = true
+            cascade = {PERSIST, MERGE}
     )
-    private Set<Product> products;
+    @Builder.Default
+    private Set<Product> products = new HashSet<>();
+
+    public void addAddress(Address address) {
+        if (address == null) return;
+        addresses.add(address);
+        address.setUser(this);
+    }
+
+    public void removeAddress(Address address) {
+        if (address == null) return;
+        addresses.remove(address);
+        address.setUser(null); // triggers orphan removal
+    }
+
+    public void addProduct(Product product) {
+        if (product == null) return;
+        products.add(product);
+        product.setUser(this);
+    }
+
+    public void removeProduct(Product product) {
+        if (product == null) return;
+        products.remove(product);
+        product.setUser(null); // detach only
+    }
 }

@@ -28,15 +28,11 @@ public class Address {
     private Long addressId;
 
     @NotBlank
-    @Size(min = 5, message = "Street name must be at least 5 characters")
+    @Size(min = 3, message = "Street name must be at least 3 characters")
     private String street;
 
     @NotBlank
-    @Size(min = 5, message = "Building name must be at least 5 characters")
-    private String buildingName;
-
-    @NotBlank
-    @Size(min = 4, message = "City name must be at least 4 characters")
+    @Size(min = 2, message = "City name must be at least 2 characters")
     private String city;
 
     @NotBlank
@@ -44,12 +40,12 @@ public class Address {
     private String state;
 
     @NotBlank
-    @Size(min = 2, message = "Country name must be at least 2 characters")
-    private String country;
+    @Size(min = 5, message = "Pincode must be at least 5 characters")
+    private String pincode;
 
     @NotBlank
-    @Size(min = 6, message = "Pincode must be at least 6 characters")
-    private String pincode;
+    @Size(min = 2, message = "Country name must be at least 2 characters")
+    private String country;
 
     @ManyToOne
     @JoinColumn(name = "user_id")
