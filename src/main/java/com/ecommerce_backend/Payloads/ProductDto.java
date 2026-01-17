@@ -12,6 +12,7 @@ public class ProductDto {
 
     private final Long productId;
     private final String productName;
+    private final boolean active;
     private final Long categoryId;
     private final String imagePath;
     private final String description;

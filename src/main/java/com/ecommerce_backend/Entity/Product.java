@@ -33,6 +33,9 @@ public class Product {
     @Column(nullable = false)
     private String productName;
 
+    @Column(nullable = false)
+    private boolean active = true;
+
     @Column(columnDefinition = "TEXT")
     private String imagePath;
 

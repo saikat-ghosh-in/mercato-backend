@@ -54,6 +54,7 @@ public class ProductServiceImpl implements ProductService {
 
         Product product = new Product();
         product.setProductName(productDto.getProductName());
+        product.setActive(productDto.isActive());
         product.setImagePath(Paths.get(productsImageFolder, placeholderImageName).toString());
         product.setDescription(productDto.getDescription());
         product.setQuantity(productDto.getQuantity());
@@ -103,6 +104,7 @@ public class ProductServiceImpl implements ProductService {
         Category category = categoryService.getCategoryById(productDto.getCategoryId()); // throws
 
         product.setProductName(productDto.getProductName());
+        product.setActive(productDto.isActive());
         product.setDescription(productDto.getDescription());
         product.setQuantity(productDto.getQuantity());
         product.setRetailPrice(productDto.getRetailPrice());
@@ -231,6 +233,7 @@ public class ProductServiceImpl implements ProductService {
 
             Product p = new Product();
             p.setProductName("Dummy Product " + i);
+            p.setActive(true);
             p.setDescription("This is a dummy description for product " + i);
             p.setImagePath(Paths.get(productsImageFolder, placeholderImageName).toString());
             p.setQuantity(10 + i);
@@ -250,6 +253,7 @@ public class ProductServiceImpl implements ProductService {
         return new ProductDto(
                 product.getProductId(),
                 product.getProductName(),
+                product.isActive(),
                 product.getCategory().getCategoryId(),
                 product.getImagePath(),
                 product.getDescription(),
@@ -262,9 +266,9 @@ public class ProductServiceImpl implements ProductService {
     }
 
     private void validateIfAlreadyExists(ProductDto productDto) {
-        Long productId = productDto.getProductId();
-        if (productRepository.existsById(productId)) {
-            throw new ResourceAlreadyExistsException("Product", "productId", productId);
+        String productName = productDto.getProductName();
+        if (productRepository.existsByProductName(productName)) {
+            throw new ResourceAlreadyExistsException("Product", "productName", productName);
         }
     }
 }
