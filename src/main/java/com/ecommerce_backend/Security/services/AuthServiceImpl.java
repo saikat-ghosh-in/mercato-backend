@@ -10,7 +10,7 @@ import com.ecommerce_backend.Security.jwt.JwtUtils;
 import com.ecommerce_backend.Security.payloads.LoginRequest;
 import com.ecommerce_backend.Security.payloads.SignupRequest;
 import com.ecommerce_backend.Security.payloads.UserInfoResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -30,17 +30,14 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
-    @Autowired
-    private JwtUtils jwtUtils;
-    @Autowired
-    private AuthenticationManager authenticationManager;
-    @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private RoleRepository roleRepository;
-    @Autowired
-    private PasswordEncoder encoder;
+
+    private final JwtUtils jwtUtils;
+    private final AuthenticationManager authenticationManager;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder encoder;
 
     @Override
     public ResponseEntity<UserInfoResponse> authenticateUser(LoginRequest loginRequest) {

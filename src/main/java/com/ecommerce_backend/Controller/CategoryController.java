@@ -4,17 +4,17 @@ import com.ecommerce_backend.Configuration.AppConstants;
 import com.ecommerce_backend.Payloads.CategoryDto;
 import com.ecommerce_backend.Payloads.CategoryResponse;
 import com.ecommerce_backend.Service.CategoryService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api")
+@RequiredArgsConstructor
 public class CategoryController {
 
-    @Autowired
-    private CategoryService categoryService;
+    private final CategoryService categoryService;
 
     @PostMapping("/admin/categories/create")
     public ResponseEntity<CategoryDto> createCategory(@RequestBody CategoryDto categoryDto) {

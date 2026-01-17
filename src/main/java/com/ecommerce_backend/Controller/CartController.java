@@ -1,10 +1,9 @@
 package com.ecommerce_backend.Controller;
 
 import com.ecommerce_backend.Payloads.CartDto;
-import com.ecommerce_backend.Repository.CartRepository;
 import com.ecommerce_backend.Security.services.AuthService;
 import com.ecommerce_backend.Service.CartService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,16 +12,11 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api")
+@RequiredArgsConstructor
 public class CartController {
 
-    @Autowired
-    private CartRepository cartRepository;
-
-    @Autowired
-    private AuthService authService;
-
-    @Autowired
-    private CartService cartService;
+    private final AuthService authService;
+    private final CartService cartService;
 
     @PostMapping("/carts/products/{productId}/quantity/{quantity}")
     public ResponseEntity<CartDto> addProductToCart(@PathVariable Long productId,

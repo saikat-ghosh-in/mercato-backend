@@ -6,8 +6,8 @@ import com.ecommerce_backend.ExceptionHandler.ResourceNotFoundException;
 import com.ecommerce_backend.Payloads.CategoryDto;
 import com.ecommerce_backend.Payloads.CategoryResponse;
 import com.ecommerce_backend.Repository.CategoryRepository;
+import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -21,13 +21,11 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class CategoryServiceImpl implements CategoryService {
 
-    @Autowired
-    private ModelMapper modelMapper;
-
-    @Autowired
-    private CategoryRepository categoryRepository;
+    private final ModelMapper modelMapper;
+    private final CategoryRepository categoryRepository;
 
 
     @Override

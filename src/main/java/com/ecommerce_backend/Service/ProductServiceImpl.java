@@ -11,7 +11,7 @@ import com.ecommerce_backend.Repository.CategoryRepository;
 import com.ecommerce_backend.Repository.ProductRepository;
 import com.ecommerce_backend.Security.services.UserDetailsServiceImpl;
 import com.ecommerce_backend.Utils.FileService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
 
     @Value("${images.products.folder}")
@@ -37,20 +38,11 @@ public class ProductServiceImpl implements ProductService {
     @Value("${images.products.placeholder}")
     private String placeholderImageName;
 
-    @Autowired
-    private ProductRepository productRepository;
-
-    @Autowired
-    private CategoryService categoryService;
-
-    @Autowired
-    private CategoryRepository categoryRepository;
-
-    @Autowired
-    private UserDetailsServiceImpl userDetailsService;
-
-    @Autowired
-    private FileService fileService;
+    private final ProductRepository productRepository;
+    private final CategoryService categoryService;
+    private final CategoryRepository categoryRepository;
+    private final UserDetailsServiceImpl userDetailsService;
+    private final FileService fileService;
 
 
     @Override
