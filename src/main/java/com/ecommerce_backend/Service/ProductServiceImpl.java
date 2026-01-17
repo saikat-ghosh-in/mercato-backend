@@ -217,7 +217,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public String addDummyProducts() {
 
-        EcommUser seller = userDetailsService.getUserByUsername("seller1"); // throws
+        EcommUser seller = userDetailsService.getEcommUserByUsername("seller1"); // throws
 
         List<Category> categories = categoryRepository.findAll();
         if (categories.isEmpty()) {

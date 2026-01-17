@@ -2,6 +2,7 @@ package com.ecommerce_backend.Service;
 
 import com.ecommerce_backend.Entity.Cart;
 import com.ecommerce_backend.Entity.CartItem;
+import com.ecommerce_backend.Entity.EcommUser;
 import com.ecommerce_backend.Entity.Product;
 import com.ecommerce_backend.ExceptionHandler.GenericCustomException;
 import com.ecommerce_backend.ExceptionHandler.ResourceAlreadyExistsException;
@@ -12,7 +13,7 @@ import com.ecommerce_backend.Repository.CartItemRepository;
 import com.ecommerce_backend.Repository.CartRepository;
 import com.ecommerce_backend.Security.payloads.UserInfoResponse;
 import com.ecommerce_backend.Security.services.AuthService;
-import com.ecommerce_backend.Security.services.UserDetailsServiceImpl;
+import com.ecommerce_backend.Utils.AuthUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -27,7 +28,7 @@ public class CartServiceImpl implements CartService {
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
     private final AuthService authService;
-    private final UserDetailsServiceImpl userDetailsService;
+    private final AuthUtil authUtil;
     private final ProductService productService;
 
     @Override
@@ -171,7 +172,7 @@ public class CartServiceImpl implements CartService {
 
 
     private Cart getOrCreateCart() {
-        UserInfoResponse currentUser = authService.getCurrentUserFromAuthentication();
+        EcommUser currentUser = authUtil.getLoggedInUser();
 
         Cart existingCart = cartRepository.findCartByEmail(currentUser.getEmail());
         if (existingCart != null) {
@@ -179,7 +180,7 @@ public class CartServiceImpl implements CartService {
         }
 
         Cart cart = new Cart();
-        cart.setUser(userDetailsService.getUserByUsername(currentUser.getUsername()));
+        cart.setUser(currentUser);
         return cartRepository.save(cart);
     }
 
