@@ -1,6 +1,7 @@
 package com.ecommerce_backend.Security.services;
 
 import com.ecommerce_backend.Entity.EcommUser;
+import com.ecommerce_backend.Payloads.EcommUserDto;
 import com.ecommerce_backend.Repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -25,5 +26,12 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     public EcommUser getEcommUserByUsername(String username) throws UsernameNotFoundException {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User Not Found with username: " + username));
+    }
+
+    public EcommUserDto buildEcommUserDto(EcommUser user) {
+        return new EcommUserDto(
+                user.getUserId(),
+                user.getUsername(),
+                user.getEmail());
     }
 }

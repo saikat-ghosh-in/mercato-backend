@@ -1,7 +1,6 @@
 package com.ecommerce_backend.Repository;
 
-
-import com.ecommerce.project.model.Order;
+import com.ecommerce_backend.Entity.Fulfillment.Order;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

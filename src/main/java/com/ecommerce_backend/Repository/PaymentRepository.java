@@ -1,7 +1,6 @@
 package com.ecommerce_backend.Repository;
 
-
-import com.ecommerce.project.model.Payment;
+import com.ecommerce_backend.Entity.Fulfillment.Payment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

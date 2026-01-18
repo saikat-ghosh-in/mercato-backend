@@ -1,36 +1,24 @@
 package com.ecommerce_backend.Controller;
 
-import com.ecommerce.project.payload.OrderDTO;
-import com.ecommerce.project.payload.OrderRequestDTO;
-import com.ecommerce.project.service.OrderService;
-import com.ecommerce.project.util.AuthUtil;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.ecommerce_backend.Payloads.OrderDto;
+import com.ecommerce_backend.Payloads.OrderRequestDto;
+import com.ecommerce_backend.Service.OrderService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api")
+@RequiredArgsConstructor
 public class OrderController {
 
-    @Autowired
-    private OrderService orderService;
+    private final OrderService orderService;
 
-    @Autowired
-    private AuthUtil authUtil;
+    @PostMapping("/users/orders/capture")
+    public ResponseEntity<OrderDto> createOrder(@RequestBody OrderRequestDto orderRequestDto) {
 
-    @PostMapping("/order/users/payments/{paymentMethod}")
-    public ResponseEntity<OrderDTO> orderProducts(@PathVariable String paymentMethod, @RequestBody OrderRequestDTO orderRequestDTO) {
-        String emailId = authUtil.loggedInEmail();
-        OrderDTO order = orderService.placeOrder(
-                emailId,
-                orderRequestDTO.getAddressId(),
-                paymentMethod,
-                orderRequestDTO.getPgName(),
-                orderRequestDTO.getPgPaymentId(),
-                orderRequestDTO.getPgStatus(),
-                orderRequestDTO.getPgResponseMessage()
-        );
+        OrderDto order = orderService.placeOrder(orderRequestDto);
         return new ResponseEntity<>(order, HttpStatus.CREATED);
     }
 }

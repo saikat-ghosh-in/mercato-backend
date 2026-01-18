@@ -1,9 +1,8 @@
 package com.ecommerce_backend.Service;
 
-import com.ecommerce.project.payload.OrderDTO;
-import jakarta.transaction.Transactional;
+import com.ecommerce_backend.Payloads.OrderDto;
+import com.ecommerce_backend.Payloads.OrderRequestDto;
 
 public interface OrderService {
-    @Transactional
-    OrderDTO placeOrder(String emailId, Long addressId, String paymentMethod, String pgName, String pgPaymentId, String pgStatus, String pgResponseMessage);
+    OrderDto placeOrder(OrderRequestDto orderRequestDto);
 }

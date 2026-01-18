@@ -1,107 +1,166 @@
 package com.ecommerce_backend.Service;
 
-import com.ecommerce.project.exceptions.APIException;
-import com.ecommerce.project.exceptions.ResourceNotFoundException;
-import com.ecommerce.project.model.*;
-import com.ecommerce.project.payload.OrderDTO;
-import com.ecommerce.project.payload.OrderItemDTO;
-import com.ecommerce.project.repositories.*;
+import com.ecommerce_backend.Entity.*;
+import com.ecommerce_backend.Entity.Fulfillment.*;
+import com.ecommerce_backend.ExceptionHandler.GenericCustomException;
+import com.ecommerce_backend.Payloads.*;
+import com.ecommerce_backend.Repository.OrderRepository;
+import com.ecommerce_backend.Utils.AuthUtil;
 import jakarta.transaction.Transactional;
-import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+@Service
+@RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
 
-    @Autowired
-    CartRepository cartRepository;
-
-    @Autowired
-    AddressRepository addressRepository;
-
-    @Autowired
-    OrderItemRepository orderItemRepository;
-
-    @Autowired
-    OrderRepository orderRepository;
-
-    @Autowired
-    PaymentRepository paymentRepository;
-
-    @Autowired
-    CartService cartService;
-
-    @Autowired
-    ModelMapper modelMapper;
-
-    @Autowired
-    ProductRepository productRepository;
+    private final OrderRepository orderRepository;
+    private final CartService cartService;
+    private final ProductService productService;
+    private final PaymentService paymentService;
+    private final AddressService addressService;
+    private final AuthUtil authUtil;
 
     @Override
     @Transactional
-    public OrderDTO placeOrder(String emailId, Long addressId, String paymentMethod, String pgName, String pgPaymentId, String pgStatus, String pgResponseMessage) {
-        Cart cart = cartRepository.findCartByEmail(emailId);
-        if (cart == null) {
-            throw new ResourceNotFoundException("Cart", "email", emailId);
-        }
+    public OrderDto placeOrder(OrderRequestDto orderRequestDto) {
 
-        Address address = addressRepository.findById(addressId)
-                .orElseThrow(() -> new ResourceNotFoundException("Address", "addressId", addressId));
+        EcommUser currentUser = authUtil.getLoggedInUser();
+        Cart cart = cartService.getCartByEmail(currentUser.getEmail());
 
-        Order order = new Order();
-        order.setEmail(emailId);
-        order.setOrderDate(LocalDate.now());
-        order.setTotalAmount(cart.getTotalPrice());
-        order.setOrderStatus("Order Accepted !");
-        order.setAddress(address);
+        Order order = buildOrder(cart, orderRequestDto, currentUser);
 
-        Payment payment = new Payment(paymentMethod, pgPaymentId, pgStatus, pgResponseMessage, pgName);
-        payment.setOrder(order);
-        payment = paymentRepository.save(payment);
-        order.setPayment(payment);
+        orderRepository.save(order);
+        cartService.deleteCart(cart.getCartId());
 
-        Order savedOrder = orderRepository.save(order);
+        return buildOrderDto(order);
+    }
+
+
+    private Order buildOrder(Cart cart, OrderRequestDto orderRequestDto, EcommUser customer) {
 
         List<CartItem> cartItems = cart.getCartItems();
         if (cartItems.isEmpty()) {
-            throw new APIException("Cart is empty");
+            throw new GenericCustomException("Cart is empty");
         }
 
-        List<OrderItem> orderItems = new ArrayList<>();
+        Order order = new Order();
+
+        order.setOrderNumber(generateOrderNumber(cart.getCartId()));
+        order.setCustomerName(customer.getUsername());
+        order.setCustomerEmail(customer.getEmail());
+        order.setOrderStatus(OrderStatus.CREATED);
+        order.setCurrency("INR");
+
+        Address address = addressService.getAddressById(orderRequestDto.getAddressId());
+        order.setRecipientName(address.getRecipientName());
+        order.setRecipientPhone(address.getRecipientPhone());
+        order.setDeliveryAddressLine1(address.getAddressLine1());
+        order.setDeliveryAddressLine2(address.getAddressLine2());
+        order.setDeliveryCity(address.getCity());
+        order.setDeliveryState(address.getState());
+        order.setDeliveryPincode(address.getPincode());
+
+        int lineNumber = 1;
         for (CartItem cartItem : cartItems) {
-            OrderItem orderItem = new OrderItem();
-            orderItem.setProduct(cartItem.getProduct());
-            orderItem.setQuantity(cartItem.getQuantity());
-            orderItem.setDiscount(cartItem.getDiscount());
-            orderItem.setOrderedProductPrice(cartItem.getProductPrice());
-            orderItem.setOrder(savedOrder);
-            orderItems.add(orderItem);
+            OrderLine orderLine = new OrderLine();
+
+            orderLine.setOrderLineNumber(lineNumber++); // post-increment orderLineNumber
+            orderLine.setProductId(cartItem.getProduct().getProductId());
+            orderLine.setProductName(cartItem.getProduct().getProductName());
+            orderLine.setUnitPrice(cartItem.getItemPrice());
+            orderLine.setQuantity(cartItem.getQuantity());
+            orderLine.setLineTotal(cartItem.getLineTotal());
+            orderLine.setSellerName(cartItem.getProduct().getProductName());
+
+            EcommUser seller = productService.getSeller(cartItem.getProduct());
+            orderLine.setSellerName(seller.getUsername());
+            orderLine.setSellerEmail(seller.getEmail());
+
+            orderLine.setOrderLineStatus(OrderLineStatus.CREATED);
+
+            order.addOrderLine(orderLine);
         }
 
-        orderItems = orderItemRepository.saveAll(orderItems);
+        order.setCurrency("INR");
+        order.setSubTotal(cart.getTotalPayable()); // have cart.getSubTotal() when below design in done
+        order.setTaxAmount(BigDecimal.ZERO); // will design cart to provide this
+        order.setShippingFee(BigDecimal.ZERO); // will design cart to provide this
+        order.setTotalAmount(cart.getTotalPayable());
 
-        cart.getCartItems().forEach(item -> {
-            int quantity = item.getQuantity();
-            Product product = item.getProduct();
+        paymentService.initiatePayment(order, PaymentMethod.getFromString(orderRequestDto.getPaymentMethod()));
 
-            // Reduce stock quantity
-            product.setQuantity(product.getQuantity() - quantity);
+        return order;
+    }
 
-            // Save product back to the database
-            productRepository.save(product);
+    private String generateOrderNumber(Long cartId) {
+        String prefix = "ORD";
+        String datePart = LocalDate.now()
+                .format(DateTimeFormatter.ofPattern("ddMMyyyy"));
 
-            // Remove items from cart
-            cartService.deleteProductFromCart(cart.getCartId(), item.getProduct().getProductId());
-        });
+        return String.format("%s-%s-%06d", prefix, datePart, cartId);
+    }
 
-        OrderDTO orderDTO = modelMapper.map(savedOrder, OrderDTO.class);
-        orderItems.forEach(item -> orderDTO.getOrderItems().add(modelMapper.map(item, OrderItemDTO.class)));
+    private OrderDto buildOrderDto(Order order) {
 
-        orderDTO.setAddressId(addressId);
+        List<OrderLineDto> orderLineDtoList = order.getOrderLines().stream()
+                .map(this::buildOrderLineDto)
+                .toList();
 
-        return orderDTO;
+        return new OrderDto(
+                order.getOrderId(),
+                order.getOrderNumber(),
+                order.getOrderStatus().toString(),
+                new OrderDto.Customer(
+                        order.getCustomerName(),
+                        order.getCustomerEmail()
+                ),
+                new OrderDto.DeliveryAddress(
+                        order.getRecipientName(),
+                        order.getRecipientPhone(),
+                        order.getDeliveryAddressLine1(),
+                        order.getDeliveryAddressLine2(),
+                        order.getDeliveryCity(),
+                        order.getDeliveryState(),
+                        order.getDeliveryPincode()
+                ),
+                paymentService.buildPaymentDto(order.getPayment()),
+                orderLineDtoList,
+                order.getCurrency(),
+                order.getSubTotal(),
+                order.getTaxAmount(),
+                order.getShippingFee(),
+                order.getTotalAmount(),
+                null,
+                order.getCreateDate(),
+                order.getUpdateDate()
+        );
+    }
+
+    private OrderLineDto buildOrderLineDto(OrderLine orderLine) {
+        return new OrderLineDto(
+                orderLine.getOrderLineId(),
+                orderLine.getOrder().getOrderNumber(),
+                orderLine.getOrderLineNumber(),
+                orderLine.getOrderLineStatus().toString(),
+                new OrderLineDto.ProductDetails(
+                        orderLine.getProductId(),
+                        orderLine.getProductName(),
+                        orderLine.getUnitPrice()
+                ),
+                new OrderLineDto.Seller(
+                        orderLine.getSellerName(),
+                        orderLine.getSellerEmail()
+                ),
+                orderLine.getQuantity(),
+                orderLine.getLineTotal(),
+                orderLine.getCreateDate(),
+                orderLine.getUpdateDate()
+        );
     }
 }
