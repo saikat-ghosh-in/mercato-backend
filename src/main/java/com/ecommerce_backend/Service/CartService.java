@@ -1,5 +1,6 @@
 package com.ecommerce_backend.Service;
 
+import com.ecommerce_backend.Entity.Cart;
 import com.ecommerce_backend.Payloads.CartDto;
 
 import java.util.List;
@@ -9,11 +10,13 @@ public interface CartService {
 
     List<CartDto> getAllCarts();
 
-    CartDto getCartByEmail(String email);
+    CartDto getCurrentUserCart();
 
     CartDto updateProductQuantityInCart(Long productId, Integer newQuantity);
 
     void deleteProductFromCart(Long cartId, Long productId);
 
     void deleteCart(Long cartId);
+
+    Cart getCartByEmail(String email);
 }

@@ -249,6 +249,11 @@ public class ProductServiceImpl implements ProductService {
         return "success";
     }
 
+    @Override
+    public EcommUser getSeller(Product product) {
+        return userDetailsService.getEcommUserByUsername("seller1");
+    }
+
     private ProductDto getProductDto(Product product) {
         return new ProductDto(
                 product.getProductId(),

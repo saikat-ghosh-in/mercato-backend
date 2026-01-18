@@ -76,11 +76,9 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    public CartDto getCartByEmail(String email) {
-        Cart cart = cartRepository.findCartByEmail(email);
-        if (cart == null) {
-            throw new ResourceNotFoundException("Cart", "email", email);
-        }
+    public CartDto getCurrentUserCart() {
+        EcommUser currentUser = authUtil.getLoggedInUser();
+        Cart cart = getCartByEmail(currentUser.getEmail()); // throws
         return getCartDto(cart);
     }
 
@@ -174,14 +172,22 @@ public class CartServiceImpl implements CartService {
     private Cart getOrCreateCart() {
         EcommUser currentUser = authUtil.getLoggedInUser();
 
-        Cart existingCart = cartRepository.findCartByEmail(currentUser.getEmail());
-        if (existingCart != null) {
-            return existingCart;
+        try {
+            return this.getCartByEmail(currentUser.getEmail()); // throws
+        } catch (ResourceNotFoundException ex) {
+            Cart cart = new Cart();
+            cart.setUser(currentUser);
+            return cartRepository.save(cart);
         }
+    }
 
-        Cart cart = new Cart();
-        cart.setUser(currentUser);
-        return cartRepository.save(cart);
+    @Override
+    public Cart getCartByEmail(String email) {
+        Cart cart = cartRepository.findCartByEmail(email);
+        if (cart == null) {
+            throw new ResourceNotFoundException("Cart", "email", email);
+        }
+        return cart;
     }
 
     private CartDto getCartDto(Cart cart) {

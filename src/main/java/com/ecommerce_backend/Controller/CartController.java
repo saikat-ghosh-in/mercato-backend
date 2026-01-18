@@ -32,9 +32,8 @@ public class CartController {
     }
 
     @GetMapping("/carts/users/cart")
-    public ResponseEntity<CartDto> getCartById() {
-        String email = authService.getCurrentUserFromAuthentication().getEmail();
-        CartDto cartDto = cartService.getCartByEmail(email);
+    public ResponseEntity<CartDto> getCurrentUserCart() {
+        CartDto cartDto = cartService.getCurrentUserCart();
         return new ResponseEntity<>(cartDto, HttpStatus.OK);
     }
 

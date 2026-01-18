@@ -1,0 +1,166 @@
+package com.ecommerce_backend.Service;
+
+import com.ecommerce_backend.Entity.*;
+import com.ecommerce_backend.Entity.Fulfillment.*;
+import com.ecommerce_backend.ExceptionHandler.GenericCustomException;
+import com.ecommerce_backend.Payloads.*;
+import com.ecommerce_backend.Repository.OrderRepository;
+import com.ecommerce_backend.Utils.AuthUtil;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class OrderServiceImpl implements OrderService {
+
+    private final OrderRepository orderRepository;
+    private final CartService cartService;
+    private final ProductService productService;
+    private final PaymentService paymentService;
+    private final AddressService addressService;
+    private final AuthUtil authUtil;
+
+    @Override
+    @Transactional
+    public OrderDto placeOrder(OrderRequestDto orderRequestDto) {
+
+        EcommUser currentUser = authUtil.getLoggedInUser();
+        Cart cart = cartService.getCartByEmail(currentUser.getEmail());
+
+        Order order = buildOrder(cart, orderRequestDto, currentUser);
+
+        orderRepository.save(order);
+        cartService.deleteCart(cart.getCartId());
+
+        return buildOrderDto(order);
+    }
+
+
+    private Order buildOrder(Cart cart, OrderRequestDto orderRequestDto, EcommUser customer) {
+
+        List<CartItem> cartItems = cart.getCartItems();
+        if (cartItems.isEmpty()) {
+            throw new GenericCustomException("Cart is empty");
+        }
+
+        Order order = new Order();
+
+        order.setOrderNumber(generateOrderNumber(cart.getCartId()));
+        order.setCustomerName(customer.getUsername());
+        order.setCustomerEmail(customer.getEmail());
+        order.setOrderStatus(OrderStatus.CREATED);
+        order.setCurrency("INR");
+
+        Address address = addressService.getAddressById(orderRequestDto.getAddressId());
+        order.setRecipientName(address.getRecipientName());
+        order.setRecipientPhone(address.getRecipientPhone());
+        order.setDeliveryAddressLine1(address.getAddressLine1());
+        order.setDeliveryAddressLine2(address.getAddressLine2());
+        order.setDeliveryCity(address.getCity());
+        order.setDeliveryState(address.getState());
+        order.setDeliveryPincode(address.getPincode());
+
+        int lineNumber = 1;
+        for (CartItem cartItem : cartItems) {
+            OrderLine orderLine = new OrderLine();
+
+            orderLine.setOrderLineNumber(lineNumber++); // post-increment orderLineNumber
+            orderLine.setProductId(cartItem.getProduct().getProductId());
+            orderLine.setProductName(cartItem.getProduct().getProductName());
+            orderLine.setUnitPrice(cartItem.getItemPrice());
+            orderLine.setQuantity(cartItem.getQuantity());
+            orderLine.setLineTotal(cartItem.getLineTotal());
+            orderLine.setSellerName(cartItem.getProduct().getProductName());
+
+            EcommUser seller = productService.getSeller(cartItem.getProduct());
+            orderLine.setSellerName(seller.getUsername());
+            orderLine.setSellerEmail(seller.getEmail());
+
+            orderLine.setOrderLineStatus(OrderLineStatus.CREATED);
+
+            order.addOrderLine(orderLine);
+        }
+
+        order.setCurrency("INR");
+        order.setSubTotal(cart.getTotalPayable()); // have cart.getSubTotal() when below design in done
+        order.setTaxAmount(BigDecimal.ZERO); // will design cart to provide this
+        order.setShippingFee(BigDecimal.ZERO); // will design cart to provide this
+        order.setTotalAmount(cart.getTotalPayable());
+
+        paymentService.initiatePayment(order, PaymentMethod.getFromString(orderRequestDto.getPaymentMethod()));
+
+        return order;
+    }
+
+    private String generateOrderNumber(Long cartId) {
+        String prefix = "ORD";
+        String datePart = LocalDate.now()
+                .format(DateTimeFormatter.ofPattern("ddMMyyyy"));
+
+        return String.format("%s-%s-%06d", prefix, datePart, cartId);
+    }
+
+    private OrderDto buildOrderDto(Order order) {
+
+        List<OrderLineDto> orderLineDtoList = order.getOrderLines().stream()
+                .map(this::buildOrderLineDto)
+                .toList();
+
+        return new OrderDto(
+                order.getOrderId(),
+                order.getOrderNumber(),
+                order.getOrderStatus().toString(),
+                new OrderDto.Customer(
+                        order.getCustomerName(),
+                        order.getCustomerEmail()
+                ),
+                new OrderDto.DeliveryAddress(
+                        order.getRecipientName(),
+                        order.getRecipientPhone(),
+                        order.getDeliveryAddressLine1(),
+                        order.getDeliveryAddressLine2(),
+                        order.getDeliveryCity(),
+                        order.getDeliveryState(),
+                        order.getDeliveryPincode()
+                ),
+                paymentService.buildPaymentDto(order.getPayment()),
+                orderLineDtoList,
+                order.getCurrency(),
+                order.getSubTotal(),
+                order.getTaxAmount(),
+                order.getShippingFee(),
+                order.getTotalAmount(),
+                null,
+                order.getCreateDate(),
+                order.getUpdateDate()
+        );
+    }
+
+    private OrderLineDto buildOrderLineDto(OrderLine orderLine) {
+        return new OrderLineDto(
+                orderLine.getOrderLineId(),
+                orderLine.getOrder().getOrderNumber(),
+                orderLine.getOrderLineNumber(),
+                orderLine.getOrderLineStatus().toString(),
+                new OrderLineDto.ProductDetails(
+                        orderLine.getProductId(),
+                        orderLine.getProductName(),
+                        orderLine.getUnitPrice()
+                ),
+                new OrderLineDto.Seller(
+                        orderLine.getSellerName(),
+                        orderLine.getSellerEmail()
+                ),
+                orderLine.getQuantity(),
+                orderLine.getLineTotal(),
+                orderLine.getCreateDate(),
+                orderLine.getUpdateDate()
+        );
+    }
+}
