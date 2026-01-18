@@ -157,7 +157,9 @@ public class Order {
 
     @Transient
     public Map<OrderStatus, List<StateTransition>> getStateTransitionsByStatus() {
-        return stateTransitions.stream()
+        return stateTransitions == null
+                ? Map.of()
+                : stateTransitions.stream()
                 .collect(Collectors.groupingBy(StateTransition::getStatus));
     }
 }
