@@ -28,18 +28,8 @@ public class Address {
     private Long addressId;
 
     @NotBlank
-    @Column(nullable = false)
-    private String recipientName;
-
-    @NotBlank
-    @Column(nullable = false, length = 15)
-    private String recipientPhone;
-
-    @NotBlank
-    @Size(min = 3, message = "Address line 1 must be at least 3 characters")
-    private String addressLine1;
-
-    private String addressLine2;
+    @Size(min = 3, message = "Street name must be at least 3 characters")
+    private String street;
 
     @NotBlank
     @Size(min = 2, message = "City name must be at least 2 characters")

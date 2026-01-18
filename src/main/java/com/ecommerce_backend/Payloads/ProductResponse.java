@@ -9,6 +9,7 @@ import java.util.List;
 
 @Data
 @Builder
+@NoArgsConstructor
 @AllArgsConstructor
 public class ProductResponse {
     private List<ProductDto> content;

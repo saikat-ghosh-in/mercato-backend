@@ -1,16 +1,14 @@
 package com.ecommerce_backend.Payloads;
 
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Data;
 
-@Getter
+@Data
 @AllArgsConstructor
 public class AddressDto {
     private Long addressId;
-    private String recipientName;
-    private String recipientPhone;
-    private String addressLine1;
-    private String addressLine2;
+    private Long userId;
+    private String street;
     private String city;
     private String state;
     private String pincode;

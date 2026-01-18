@@ -15,7 +15,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class AddressServiceImpl implements AddressService {
+public class AddressServiceImpl implements AddressService{
 
     private final AddressRepository addressRepository;
     private final AuthUtil authUtil;
@@ -26,10 +26,7 @@ public class AddressServiceImpl implements AddressService {
         EcommUser currentUser = authUtil.getLoggedInUser();
 
         Address newAddress = new Address();
-        newAddress.setRecipientName(addressDto.getRecipientName());
-        newAddress.setRecipientPhone(addressDto.getRecipientPhone());
-        newAddress.setAddressLine1(addressDto.getAddressLine1());
-        newAddress.setAddressLine2(addressDto.getAddressLine2());
+        newAddress.setStreet(addressDto.getStreet());
         newAddress.setCity(addressDto.getCity());
         newAddress.setState(addressDto.getState());
         newAddress.setPincode(addressDto.getPincode());
@@ -38,21 +35,21 @@ public class AddressServiceImpl implements AddressService {
         currentUser.addAddress(newAddress);
 
         Address savedAddress = addressRepository.save(newAddress);
-        return buildAddressDto(savedAddress);
+        return getAddressDto(savedAddress);
     }
 
     @Override
     public List<AddressDto> getAllAddresses() {
         List<Address> addresses = addressRepository.findAll();
         return addresses.stream()
-                .map(this::buildAddressDto)
+                .map(this::getAddressDto)
                 .toList();
     }
 
     @Override
     public AddressDto getAddress(Long addressId) {
         Address address = getAddressById(addressId); // throws
-        return buildAddressDto(address);
+        return getAddressDto(address);
     }
 
     @Override
@@ -60,7 +57,7 @@ public class AddressServiceImpl implements AddressService {
         EcommUser currentUser = authUtil.getLoggedInUser();
         List<Address> addresses = currentUser.getAddresses();
         return addresses.stream()
-                .map(this::buildAddressDto)
+                .map(this::getAddressDto)
                 .toList();
     }
 
@@ -77,16 +74,13 @@ public class AddressServiceImpl implements AddressService {
             throw new AccessDeniedException("You cannot update this address");
         }
 
-        address.setRecipientName(addressDto.getRecipientName());
-        address.setRecipientPhone(addressDto.getRecipientPhone());
-        address.setAddressLine1(addressDto.getAddressLine1());
-        address.setAddressLine2(addressDto.getAddressLine2());
+        address.setStreet(addressDto.getStreet());
         address.setCity(addressDto.getCity());
         address.setState(addressDto.getState());
         address.setPincode(addressDto.getPincode());
         address.setCountry(addressDto.getCountry());
 
-        return buildAddressDto(address);
+        return getAddressDto(address);
     }
 
     @Override
@@ -105,20 +99,16 @@ public class AddressServiceImpl implements AddressService {
         currentUser.removeAddress(address);
     }
 
-    @Override
-    public Address getAddressById(Long addressId) {
+    private Address getAddressById(Long addressId) {
         return addressRepository.findById(addressId)
                 .orElseThrow(() -> new ResourceNotFoundException("Address", "addressId", addressId));
     }
 
-    @Override
-    public AddressDto buildAddressDto(Address address) {
+    private AddressDto getAddressDto(Address address) {
         return new AddressDto(
                 address.getAddressId(),
-                address.getRecipientName(),
-                address.getRecipientPhone(),
-                address.getAddressLine1(),
-                address.getAddressLine2(),
+                address.getUser().getUserId(),
+                address.getStreet(),
                 address.getCity(),
                 address.getState(),
                 address.getPincode(),
