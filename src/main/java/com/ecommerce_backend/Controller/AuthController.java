@@ -5,7 +5,7 @@ import com.ecommerce_backend.Security.payloads.SignupRequest;
 import com.ecommerce_backend.Security.payloads.UserInfoResponse;
 import com.ecommerce_backend.Security.services.AuthService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -16,10 +16,10 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
-    @Autowired
-    private AuthService authService;
+    private final AuthService authService;
 
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
@@ -46,18 +46,23 @@ public class AuthController {
 
     @GetMapping("/username")
     public ResponseEntity<String> getUsernameFromAuthentication(Authentication authentication) {
-        String username = authService.getUsernameFromAuthentication(authentication);
+        String username = authService.getCurrentUsernameFromAuthentication();
         return ResponseEntity.ok(username);
     }
 
     @GetMapping("/user")
-    public ResponseEntity<?> getUserDetailsFromAuthentication(Authentication authentication) {
-        UserInfoResponse username = authService.getUserDetailsFromAuthentication(authentication);
+    public ResponseEntity<?> getCurrentUserFromAuthentication() {
+        UserInfoResponse username = authService.getCurrentUserFromAuthentication();
         return ResponseEntity.ok(username);
     }
 
     @PostMapping("/signout")
     public ResponseEntity<?> signOutCurrentUser() {
         return authService.signOutCurrentUser();
+    }
+
+    @GetMapping("/addDummyUsers")
+    public String addDummyUsers() {
+        return authService.addDummyUsers();
     }
 }

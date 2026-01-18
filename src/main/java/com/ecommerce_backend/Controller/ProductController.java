@@ -4,7 +4,7 @@ import com.ecommerce_backend.Configuration.AppConstants;
 import com.ecommerce_backend.Payloads.ProductDto;
 import com.ecommerce_backend.Payloads.ProductResponse;
 import com.ecommerce_backend.Service.ProductService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,9 +14,10 @@ import java.io.IOException;
 
 @RestController
 @RequestMapping("/api")
+@RequiredArgsConstructor
 public class ProductController {
-    @Autowired
-    private ProductService productService;
+
+    private final ProductService productService;
 
     @PostMapping("/admin/categories/{categoryId}/product")
     public ResponseEntity<ProductDto> addProduct(@RequestBody ProductDto productDto,
@@ -41,8 +42,7 @@ public class ProductController {
     }
 
     @PutMapping("/admin/products/update")
-    public ResponseEntity<ProductDto> updateProduct(@RequestBody ProductDto productDto,
-                                                    @RequestParam Long CategoryId) {
+    public ResponseEntity<ProductDto> updateProduct(@RequestBody ProductDto productDto) {
         ProductDto updatedProductDto = productService.updateProduct(productDto);
         return new ResponseEntity<>(updatedProductDto, HttpStatus.OK);
     }
@@ -78,5 +78,17 @@ public class ProductController {
                                                                 @RequestParam(defaultValue = AppConstants.SORTING_ORDER) String sortingOrder) {
         ProductResponse productResponse = productService.getProductsByKeyword(keyword, pageNumber, pageSize, sortBy, sortingOrder);
         return new ResponseEntity<>(productResponse, HttpStatus.OK);
+    }
+
+    @PostMapping("/admin/products/{productId}/newQuantity/{newQuantity}")
+    public ResponseEntity<ProductDto> getProductsByKeyword(@PathVariable Long productId,
+                                                                @PathVariable Integer newQuantity) {
+        ProductDto productDto = productService.updateProductInventory(productId, newQuantity);
+        return new ResponseEntity<>(productDto, HttpStatus.OK);
+    }
+
+    @GetMapping("/addDummyProducts")
+    public ResponseEntity<String> addDummyProducts() {
+        return new ResponseEntity<>(productService.addDummyProducts(), HttpStatus.CREATED);
     }
 }

@@ -20,4 +20,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                    OR LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
             """)
     Page<Product> findByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
+    boolean existsByProductName(String productName);
 }

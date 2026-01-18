@@ -10,10 +10,11 @@ import com.ecommerce_backend.Security.jwt.JwtUtils;
 import com.ecommerce_backend.Security.payloads.LoginRequest;
 import com.ecommerce_backend.Security.payloads.SignupRequest;
 import com.ecommerce_backend.Security.payloads.UserInfoResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -21,6 +22,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.List;
@@ -28,17 +30,14 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
-    @Autowired
-    private JwtUtils jwtUtils;
-    @Autowired
-    private AuthenticationManager authenticationManager;
-    @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private RoleRepository roleRepository;
-    @Autowired
-    private PasswordEncoder encoder;
+
+    private final JwtUtils jwtUtils;
+    private final AuthenticationManager authenticationManager;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder encoder;
 
     @Override
     public ResponseEntity<UserInfoResponse> authenticateUser(LoginRequest loginRequest) {
@@ -58,6 +57,7 @@ public class AuthServiceImpl implements AuthService {
         UserInfoResponse response = UserInfoResponse.builder()
                 .userId(userDetails.getUserId())
                 .username(userDetails.getUsername())
+                .email(userDetails.getEmail())
                 .roles(roles)
                 .build();
 
@@ -67,6 +67,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional
     public String registerNewUser(SignupRequest signUpRequest) {
         throwIfAnExistingUser(signUpRequest.getUsername(), signUpRequest.getEmail()); // throws
 
@@ -97,15 +98,25 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public String getUsernameFromAuthentication(Authentication authentication) {
-        if (authentication != null)
+    public String getCurrentUsernameFromAuthentication() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated())
             return authentication.getName();
         return "Guest";
     }
 
     @Override
-    public UserInfoResponse getUserDetailsFromAuthentication(Authentication authentication) {
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+    public UserInfoResponse getCurrentUserFromAuthentication() {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new AccessDeniedException("User is not authenticated");
+        }
+
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof UserDetailsImpl userDetails)) {
+            throw new IllegalStateException("Unexpected principal type: " + principal.getClass());
+        }
 
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -114,9 +125,11 @@ public class AuthServiceImpl implements AuthService {
         return UserInfoResponse.builder()
                 .userId(userDetails.getUserId())
                 .username(userDetails.getUsername())
+                .email(userDetails.getEmail())
                 .roles(roles)
                 .build();
     }
+
 
     @Override
     public ResponseEntity<?> signOutCurrentUser() {
@@ -124,6 +137,80 @@ public class AuthServiceImpl implements AuthService {
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cleanCookie.toString())
                 .body("You have been signed out!");
+    }
+
+    @Override
+    @Transactional
+    public String addDummyUsers() {
+        Role userRole = roleRepository.findByRoleName(AppRole.ROLE_USER)
+                .orElseGet(() -> {
+                    Role newUserRole = new Role(AppRole.ROLE_USER);
+                    return roleRepository.save(newUserRole);
+                });
+
+        Role sellerRole = roleRepository.findByRoleName(AppRole.ROLE_SELLER)
+                .orElseGet(() -> {
+                    Role newSellerRole = new Role(AppRole.ROLE_SELLER);
+                    return roleRepository.save(newSellerRole);
+                });
+
+        Role adminRole = roleRepository.findByRoleName(AppRole.ROLE_ADMIN)
+                .orElseGet(() -> {
+                    Role newAdminRole = new Role(AppRole.ROLE_ADMIN);
+                    return roleRepository.save(newAdminRole);
+                });
+
+        Set<Role> userRoles = new HashSet<>(Set.of(getRoleByRoleName(AppRole.ROLE_USER)));
+        Set<Role> sellerRoles = new HashSet<>(Set.of(getRoleByRoleName(AppRole.ROLE_SELLER)));
+        Set<Role> adminRoles = new HashSet<>(Set.of(getRoleByRoleName(AppRole.ROLE_USER),
+                getRoleByRoleName(AppRole.ROLE_SELLER),
+                getRoleByRoleName(AppRole.ROLE_ADMIN)));
+
+
+        // Create users if not already present
+        if (!userRepository.existsByUsername("user1")) {
+            EcommUser user1 = EcommUser.builder()
+                    .username("user1")
+                    .email("user1@example.com")
+                    .password(encoder.encode("password1"))
+                    .build();
+            userRepository.save(user1);
+        }
+
+        if (!userRepository.existsByUsername("seller1")) {
+            EcommUser seller1 = EcommUser.builder()
+                    .username("seller1")
+                    .email("seller1@example.com")
+                    .password(encoder.encode("password2"))
+                    .build();
+            userRepository.save(seller1);
+        }
+
+        if (!userRepository.existsByUsername("admin")) {
+            EcommUser admin = EcommUser.builder()
+                    .username("admin")
+                    .email("admin@example.com")
+                    .password(encoder.encode("adminPass"))
+                    .build();
+            userRepository.save(admin);
+        }
+
+        // Update roles for existing users
+        userRepository.findByUsername("user1").ifPresent(user -> {
+            user.setRoles(userRoles);
+            userRepository.save(user);
+        });
+
+        userRepository.findByUsername("seller1").ifPresent(seller -> {
+            seller.setRoles(sellerRoles);
+            userRepository.save(seller);
+        });
+
+        userRepository.findByUsername("admin").ifPresent(admin -> {
+            admin.setRoles(adminRoles);
+            userRepository.save(admin);
+        });
+        return "success";
     }
 
     private void throwIfAnExistingUser(String username, String email) {

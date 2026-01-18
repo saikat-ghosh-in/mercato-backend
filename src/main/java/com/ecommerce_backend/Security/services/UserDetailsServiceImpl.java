@@ -1,24 +1,37 @@
 package com.ecommerce_backend.Security.services;
 
 import com.ecommerce_backend.Entity.EcommUser;
+import com.ecommerce_backend.Payloads.EcommUserDto;
 import com.ecommerce_backend.Repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class UserDetailsServiceImpl implements UserDetailsService {
-    @Autowired
-    UserRepository userRepository;
+
+    private final UserRepository userRepository;
 
     @Override
     @Transactional
     public UserDetailsImpl loadUserByUsername(String username) throws UsernameNotFoundException {
-        EcommUser user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User Not Found with username: " + username));
-
+        EcommUser user = getEcommUserByUsername(username);
         return UserDetailsImpl.build(user);
+    }
+
+    @Transactional
+    public EcommUser getEcommUserByUsername(String username) throws UsernameNotFoundException {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User Not Found with username: " + username));
+    }
+
+    public EcommUserDto buildEcommUserDto(EcommUser user) {
+        return new EcommUserDto(
+                user.getUserId(),
+                user.getUsername(),
+                user.getEmail());
     }
 }

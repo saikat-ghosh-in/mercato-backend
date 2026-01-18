@@ -1,5 +1,8 @@
 package com.ecommerce_backend.Service;
 
+import com.ecommerce_backend.Entity.EcommUser;
+import com.ecommerce_backend.Entity.Product;
+import com.ecommerce_backend.Payloads.EcommUserDto;
 import com.ecommerce_backend.Payloads.ProductDto;
 import com.ecommerce_backend.Payloads.ProductResponse;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,4 +26,12 @@ public interface ProductService {
     ProductResponse getProductsByCategory(Long categoryId, Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder);
 
     ProductResponse getProductsByKeyword(String keyword, Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder);
+
+    Product getProductById(Long productId);
+
+    ProductDto updateProductInventory(Long productId, Integer newQuantity);
+
+    String addDummyProducts();
+
+    EcommUser getSeller(Product product);
 }

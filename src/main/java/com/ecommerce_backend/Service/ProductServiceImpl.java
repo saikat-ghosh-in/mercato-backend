@@ -1,15 +1,17 @@
 package com.ecommerce_backend.Service;
 
 import com.ecommerce_backend.Entity.Category;
+import com.ecommerce_backend.Entity.EcommUser;
 import com.ecommerce_backend.Entity.Product;
 import com.ecommerce_backend.ExceptionHandler.ResourceAlreadyExistsException;
 import com.ecommerce_backend.ExceptionHandler.ResourceNotFoundException;
 import com.ecommerce_backend.Payloads.ProductDto;
 import com.ecommerce_backend.Payloads.ProductResponse;
+import com.ecommerce_backend.Repository.CategoryRepository;
 import com.ecommerce_backend.Repository.ProductRepository;
+import com.ecommerce_backend.Security.services.UserDetailsServiceImpl;
 import com.ecommerce_backend.Utils.FileService;
-import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,24 +23,26 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
 
     @Value("${images.products.folder}")
     private String productsImageFolder;
+
     @Value("${images.products.placeholder}")
     private String placeholderImageName;
-    @Autowired
-    private ProductRepository productRepository;
-    @Autowired
-    private ModelMapper modelMapper;
-    @Autowired
-    private CategoryService categoryService;
-    @Autowired
-    private FileService fileService;
+
+    private final ProductRepository productRepository;
+    private final CategoryService categoryService;
+    private final CategoryRepository categoryRepository;
+    private final UserDetailsServiceImpl userDetailsService;
+    private final FileService fileService;
 
 
     @Override
@@ -50,16 +54,16 @@ public class ProductServiceImpl implements ProductService {
 
         Product product = new Product();
         product.setProductName(productDto.getProductName());
+        product.setActive(productDto.isActive());
         product.setImagePath(Paths.get(productsImageFolder, placeholderImageName).toString());
         product.setDescription(productDto.getDescription());
         product.setQuantity(productDto.getQuantity());
         product.setRetailPrice(productDto.getRetailPrice());
-        product.setDiscount(productDto.getDiscount());
-        product.setSpecialPrice(getDiscountedPrice(productDto.getRetailPrice(), productDto.getDiscount()));
+        product.setDiscountPercent(productDto.getDiscountPercent());
         product.setCategory(category);
 
-        Product saved = productRepository.save(product);
-        return modelMapper.map(saved, ProductDto.class);
+        Product savedProduct = productRepository.save(product);
+        return getProductDto(savedProduct);
     }
 
     @Override
@@ -73,7 +77,7 @@ public class ProductServiceImpl implements ProductService {
         Page<Product> productsPage = productRepository.findAll(pageDetails);
         List<Product> products = productsPage.getContent();
         List<ProductDto> productDtoList = products.stream()
-                .map(product -> modelMapper.map(product, ProductDto.class))
+                .map(this::getProductDto)
                 .toList();
 
         return ProductResponse.builder()
@@ -89,7 +93,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public ProductDto getProduct(Long productId) {
         Product product = getProductById(productId);
-        return modelMapper.map(product, ProductDto.class);
+        return getProductDto(product);
     }
 
     @Override
@@ -100,15 +104,15 @@ public class ProductServiceImpl implements ProductService {
         Category category = categoryService.getCategoryById(productDto.getCategoryId()); // throws
 
         product.setProductName(productDto.getProductName());
+        product.setActive(productDto.isActive());
         product.setDescription(productDto.getDescription());
         product.setQuantity(productDto.getQuantity());
         product.setRetailPrice(productDto.getRetailPrice());
-        product.setDiscount(productDto.getDiscount());
-        product.setSpecialPrice(getDiscountedPrice(productDto.getRetailPrice(), productDto.getDiscount()));
+        product.setDiscountPercent(productDto.getDiscountPercent());
         product.setCategory(category);
 
-        Product saved = productRepository.save(product);
-        return modelMapper.map(saved, ProductDto.class);
+        Product savedProduct = productRepository.save(product);
+        return getProductDto(savedProduct);
     }
 
     @Override
@@ -135,8 +139,8 @@ public class ProductServiceImpl implements ProductService {
         String imageFilePath = fileService.uploadProductImage(productsImageFolder, image, productId);
         product.setImagePath(imageFilePath);
 
-        Product saved = productRepository.save(product);
-        return modelMapper.map(saved, ProductDto.class);
+        Product savedProduct = productRepository.save(product);
+        return getProductDto(savedProduct);
     }
 
     @Override
@@ -152,7 +156,7 @@ public class ProductServiceImpl implements ProductService {
         Page<Product> productsPage = productRepository.findByCategory(pageDetails, category);
         List<Product> products = productsPage.getContent();
         List<ProductDto> productDtoList = products.stream()
-                .map(product -> modelMapper.map(product, ProductDto.class))
+                .map(this::getProductDto)
                 .toList();
 
         return ProductResponse.builder()
@@ -175,7 +179,7 @@ public class ProductServiceImpl implements ProductService {
         Page<Product> productsPage = productRepository.findByKeyword(keyword, pageDetails);
         List<Product> products = productsPage.getContent();
         List<ProductDto> productDtoList = products.stream()
-                .map(product -> modelMapper.map(product, ProductDto.class))
+                .map(this::getProductDto)
                 .toList();
 
         return ProductResponse.builder()
@@ -188,11 +192,8 @@ public class ProductServiceImpl implements ProductService {
                 .build();
     }
 
-    private double getDiscountedPrice(double retailPrice, double discount) {
-        return retailPrice - ((discount * 0.01) * retailPrice);
-    }
-
-    private Product getProductById(Long productId) {
+    @Override
+    public Product getProductById(Long productId) {
         if (productId == null) {
             throw new IllegalArgumentException("productId must not be null!");
         }
@@ -200,10 +201,79 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
     }
 
+    @Override
+    @Transactional
+    public ProductDto updateProductInventory(Long productId, Integer newQuantity) {
+
+        if (newQuantity == null || newQuantity < 0) {
+            throw new IllegalArgumentException("Quantity must be a non-negative Integer.");
+        }
+
+        Product product = getProductById(productId);
+        product.setQuantity(newQuantity);
+        Product savedProduct = productRepository.save(product);
+        return getProductDto(savedProduct);
+    }
+
+    @Override
+    @Transactional
+    public String addDummyProducts() {
+
+        EcommUser seller = userDetailsService.getEcommUserByUsername("seller1"); // throws
+
+        List<Category> categories = categoryRepository.findAll();
+        if (categories.isEmpty()) {
+            throw new RuntimeException("No categories found");
+        }
+
+        List<Product> products = new ArrayList<>();
+
+        for (int i = 1; i <= 40; i++) {
+            Category category = categories.get(i % categories.size());
+
+            Product p = new Product();
+            p.setProductName("Dummy Product " + i);
+            p.setActive(true);
+            p.setDescription("This is a dummy description for product " + i);
+            p.setImagePath(Paths.get(productsImageFolder, placeholderImageName).toString());
+            p.setQuantity(10 + i);
+            p.setRetailPrice(new BigDecimal(500 + (i * 25)));
+            p.setDiscountPercent(new BigDecimal(i % 20)); // 0–19%
+            p.setCategory(category);
+            p.setUser(seller);
+
+            products.add(p);
+        }
+
+        productRepository.saveAll(products);
+        return "success";
+    }
+
+    @Override
+    public EcommUser getSeller(Product product) {
+        return userDetailsService.getEcommUserByUsername("seller1");
+    }
+
+    private ProductDto getProductDto(Product product) {
+        return new ProductDto(
+                product.getProductId(),
+                product.getProductName(),
+                product.isActive(),
+                product.getCategory().getCategoryId(),
+                product.getImagePath(),
+                product.getDescription(),
+                product.getQuantity(),
+                product.getRetailPrice(),
+                product.getDiscountPercent(),
+                product.getSellingPrice(),
+                product.getUpdateDate()
+        );
+    }
+
     private void validateIfAlreadyExists(ProductDto productDto) {
-        Long productId = productDto.getProductId();
-        if (productRepository.existsById(productId)) {
-            throw new ResourceAlreadyExistsException("Product", "productId", productId);
+        String productName = productDto.getProductName();
+        if (productRepository.existsByProductName(productName)) {
+            throw new ResourceAlreadyExistsException("Product", "productName", productName);
         }
     }
 }

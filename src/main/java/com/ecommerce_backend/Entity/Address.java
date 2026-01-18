@@ -13,20 +13,36 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Address {
+
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(
+            strategy = GenerationType.SEQUENCE,
+            generator = "address_seq"
+    )
+    @SequenceGenerator(
+            name = "address_seq",
+            sequenceName = "address_seq",
+            initialValue = 50000001,
+            allocationSize = 10
+    )
     private Long addressId;
 
     @NotBlank
-    @Size(min = 5, message = "Street name must be at least 5 characters")
-    private String street;
+    @Column(nullable = false)
+    private String recipientName;
 
     @NotBlank
-    @Size(min = 5, message = "Building name must be at least 5 characters")
-    private String buildingName;
+    @Column(nullable = false, length = 15)
+    private String recipientPhone;
 
     @NotBlank
-    @Size(min = 4, message = "City name must be at least 4 characters")
+    @Size(min = 3, message = "Address line 1 must be at least 3 characters")
+    private String addressLine1;
+
+    private String addressLine2;
+
+    @NotBlank
+    @Size(min = 2, message = "City name must be at least 2 characters")
     private String city;
 
     @NotBlank
@@ -34,12 +50,12 @@ public class Address {
     private String state;
 
     @NotBlank
-    @Size(min = 2, message = "Country name must be at least 2 characters")
-    private String country;
+    @Size(min = 5, message = "Pincode must be at least 5 characters")
+    private String pincode;
 
     @NotBlank
-    @Size(min = 6, message = "Pincode must be at least 6 characters")
-    private String pincode;
+    @Size(min = 2, message = "Country name must be at least 2 characters")
+    private String country;
 
     @ManyToOne
     @JoinColumn(name = "user_id")

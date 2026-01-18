@@ -6,8 +6,8 @@ import com.ecommerce_backend.ExceptionHandler.ResourceNotFoundException;
 import com.ecommerce_backend.Payloads.CategoryDto;
 import com.ecommerce_backend.Payloads.CategoryResponse;
 import com.ecommerce_backend.Repository.CategoryRepository;
+import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -16,15 +16,16 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class CategoryServiceImpl implements CategoryService {
 
-    @Autowired
-    private ModelMapper modelMapper;
-    @Autowired
-    private CategoryRepository categoryRepository;
+    private final ModelMapper modelMapper;
+    private final CategoryRepository categoryRepository;
 
 
     @Override
@@ -105,6 +106,52 @@ public class CategoryServiceImpl implements CategoryService {
         }
         return categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "categoryId", categoryId));
+    }
+
+    @Override
+    @Transactional
+    public String addDummyCategories() {
+        Map<String, String> categoryMap = new HashMap<>();
+
+        categoryMap.put("Mens T-Shirts", "saikat");
+        categoryMap.put("Smartphones", "saikat");
+        categoryMap.put("Apparel", "saikat");
+        categoryMap.put("Home Appliances", "saikat");
+        categoryMap.put("Toys", "saikat");
+        categoryMap.put("Furniture", "saikat");
+        categoryMap.put("Books", "saikat");
+        categoryMap.put("Sports Equipment", "saikat");
+        categoryMap.put("Beauty Products", "saikat");
+        categoryMap.put("Automotive", "saikat");
+        categoryMap.put("Outdoor Gear", "saikat");
+        categoryMap.put("Electronics", "saikat");
+        categoryMap.put("Kitchen Appliances", "saikat");
+        categoryMap.put("Baby Products", "saikat");
+        categoryMap.put("Health & Fitness", "saikat");
+        categoryMap.put("Garden & Outdoor", "saikat");
+        categoryMap.put("Pet Supplies", "saikat");
+        categoryMap.put("Office Supplies", "saikat");
+        categoryMap.put("Jewelry & Watches", "saikat");
+        categoryMap.put("Travel & Luggage", "saikat");
+        categoryMap.put("Musical Instruments", "saikat");
+        categoryMap.put("Crafts & Hobbies", "saikat");
+        categoryMap.put("Collectibles & Memorabilia", "saikat");
+        categoryMap.put("Art & Decor", "saikat");
+        categoryMap.put("Food & Beverages", "saikat");
+        categoryMap.put("Stationery & Gift Wrapping", "saikat");
+        categoryMap.put("Electrical & Lighting", "saikat");
+        categoryMap.put("DIY & Tools", "saikat");
+        categoryMap.put("Party Supplies", "saikat");
+        categoryMap.put("Educational Toys", "saikat");
+
+        categoryMap.forEach((categoryName, updateUser) -> {
+            Category category = new Category();
+            category.setCategoryName(categoryName);
+            category.setUpdateUser(updateUser);
+            categoryRepository.save(category);
+        });
+
+        return "success";
     }
 
     private void validateFields(CategoryDto categoryDto) {
