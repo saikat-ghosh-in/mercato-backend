@@ -12,7 +12,7 @@ import java.time.Instant;
 
 @Entity
 @Table(
-        name = "order_lines",
+        name = "order_lines_snapshot",
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "uk_order_line_number",

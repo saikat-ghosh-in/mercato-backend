@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 
 @Entity
 @Table(
-        name = "orders",
+        name = "ecomm_order_snapshot",
         indexes = {
                 @Index(name = "idx_order_number", columnList = "order_number"),
                 @Index(name = "idx_order_status", columnList = "order_status"),
