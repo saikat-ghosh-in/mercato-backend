@@ -3,6 +3,7 @@ package com.ecommerce_backend.Service;
 import com.ecommerce_backend.Entity.*;
 import com.ecommerce_backend.Entity.Fulfillment.*;
 import com.ecommerce_backend.ExceptionHandler.GenericCustomException;
+import com.ecommerce_backend.ExceptionHandler.ResourceNotFoundException;
 import com.ecommerce_backend.Payloads.*;
 import com.ecommerce_backend.Repository.OrderRepository;
 import com.ecommerce_backend.Utils.AuthUtil;
@@ -41,6 +42,41 @@ public class OrderServiceImpl implements OrderService {
         return buildOrderDto(order);
     }
 
+    @Override
+    public List<OrderDto> getAllOrders() {
+        List<Order> orders = orderRepository.findAll();
+        return orders.stream()
+                .map(this::buildOrderDto)
+                .toList();
+    }
+
+    @Override
+    public List<OrderDto> getCurrentUserOrders() {
+        EcommUser currentUser = authUtil.getLoggedInUser();
+        List<Order> orders = orderRepository.findAllByCustomerEmail(currentUser.getEmail());
+        return orders.stream()
+                .map(this::buildOrderDto)
+                .toList();
+    }
+
+    @Override
+    public OrderDto getCurrentUserOrder(String orderNumber) {
+        EcommUser currentUser = authUtil.getLoggedInUser();
+        Order order = orderRepository.findByOrderNumberAndCustomerEmail(orderNumber, currentUser.getEmail())
+                .orElseThrow(()-> new ResourceNotFoundException("Order", "orderNumber", orderNumber));
+        return buildOrderDto(order);
+    }
+
+    @Override
+    public OrderDto getOrder(String orderNumber) {
+        Order order = getOrderByOrderNumber(orderNumber);
+        return buildOrderDto(order);
+    }
+
+    private Order getOrderByOrderNumber(String orderNumber) {
+        return orderRepository.findByOrderNumber(orderNumber)
+                .orElseThrow(()-> new ResourceNotFoundException("Order", "orderNumber", orderNumber));
+    }
 
     private Order buildOrder(Cart cart, OrderRequestDto orderRequestDto, EcommUser customer) {
 

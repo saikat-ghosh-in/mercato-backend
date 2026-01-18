@@ -8,6 +8,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
@@ -20,5 +22,33 @@ public class OrderController {
 
         OrderDto order = orderService.placeOrder(orderRequestDto);
         return new ResponseEntity<>(order, HttpStatus.CREATED);
+    }
+
+    @GetMapping("/admin/orders")
+    public ResponseEntity<List<OrderDto>> getAllOrders() {
+
+        List<OrderDto> orders = orderService.getAllOrders();
+        return new ResponseEntity<>(orders, HttpStatus.OK);
+    }
+
+    @GetMapping("/users/orders")
+    public ResponseEntity<List<OrderDto>> getCurrentUserOrders() {
+
+        List<OrderDto> orders = orderService.getCurrentUserOrders();
+        return new ResponseEntity<>(orders, HttpStatus.OK);
+    }
+
+    @GetMapping("/users/orders/{orderNumber}")
+    public ResponseEntity<OrderDto> getCurrentUserOrder(@PathVariable String orderNumber) {
+
+        OrderDto order = orderService.getCurrentUserOrder(orderNumber);
+        return new ResponseEntity<>(order, HttpStatus.OK);
+    }
+
+    @GetMapping("/admin/orders/{orderNumber}")
+    public ResponseEntity<OrderDto> getOrder(@PathVariable String orderNumber) {
+
+        OrderDto order = orderService.getOrder(orderNumber);
+        return new ResponseEntity<>(order, HttpStatus.OK);
     }
 }
