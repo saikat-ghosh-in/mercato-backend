@@ -9,6 +9,7 @@ public class AppConstants {
     public static final String SORT_PRODUCTS_BY = "productId";
     public static final String SORTING_ORDER = "asc";
 
+    public static final String PRODUCT_IMAGE_PATH_PREFIX = "products/";
     public static final BigDecimal TAX_RATE = new BigDecimal("0.18"); // 18%
     public static final BigDecimal SHIPPING_FEE = new BigDecimal("50.00"); // INR
 }

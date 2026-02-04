@@ -1,5 +1,6 @@
 package com.ecommerce_backend.Utils;
 
+import com.ecommerce_backend.Configuration.AppConstants;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,16 +24,17 @@ public class FileServiceImpl implements FileService {
 
         String fileName = "product-image-" + productId + extension;
 
-        Path folderPath = Paths.get(imagesFolderPath);
-        Files.createDirectories(folderPath);
+        Path basePath = Paths.get(imagesFolderPath);
+        Files.createDirectories(basePath);
 
-        Path filePath = folderPath.resolve(fileName); // appends fileName to the current path correctly, returns <folderPath>/fileName
+        Path filePath = basePath.resolve(fileName); // appends fileName to the current path correctly, returns <folderPath>/fileName
 
         Files.copy(
                 productImage.getInputStream(),
                 filePath,
                 StandardCopyOption.REPLACE_EXISTING
         );
-        return filePath.toString();
+
+        return AppConstants.PRODUCT_IMAGE_PATH_PREFIX + fileName;
     }
 }

@@ -1,5 +1,6 @@
 package com.ecommerce_backend.Service;
 
+import com.ecommerce_backend.Configuration.AppConstants;
 import com.ecommerce_backend.Entity.Category;
 import com.ecommerce_backend.Entity.EcommUser;
 import com.ecommerce_backend.Entity.Product;
@@ -32,6 +33,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
 
+    @Value("${images.base.url}")
+    private String imageBaseUrl;
+
     @Value("${images.products.folder}")
     private String productsImageFolder;
 
@@ -55,7 +59,7 @@ public class ProductServiceImpl implements ProductService {
         Product product = new Product();
         product.setProductName(productDto.getProductName());
         product.setActive(productDto.isActive());
-        product.setImagePath(Paths.get(productsImageFolder, placeholderImageName).toString());
+        product.setImagePath(AppConstants.PRODUCT_IMAGE_PATH_PREFIX + placeholderImageName);
         product.setDescription(productDto.getDescription());
         product.setQuantity(productDto.getQuantity());
         product.setRetailPrice(productDto.getRetailPrice());
@@ -235,7 +239,7 @@ public class ProductServiceImpl implements ProductService {
             p.setProductName("Dummy Product " + i);
             p.setActive(true);
             p.setDescription("This is a dummy description for product " + i);
-            p.setImagePath(Paths.get(productsImageFolder, placeholderImageName).toString());
+            p.setImagePath(AppConstants.PRODUCT_IMAGE_PATH_PREFIX + placeholderImageName);
             p.setQuantity(10 + i);
             p.setRetailPrice(new BigDecimal(500 + (i * 25)));
             p.setDiscountPercent(new BigDecimal(i % 20)); // 0–19%
@@ -260,7 +264,7 @@ public class ProductServiceImpl implements ProductService {
                 product.getProductName(),
                 product.isActive(),
                 product.getCategory().getCategoryId(),
-                product.getImagePath(),
+                constructImageUrl(product.getImagePath()),
                 product.getDescription(),
                 product.getQuantity(),
                 product.getRetailPrice(),
@@ -268,6 +272,10 @@ public class ProductServiceImpl implements ProductService {
                 product.getSellingPrice(),
                 product.getUpdateDate()
         );
+    }
+
+    private String constructImageUrl(String imagePath) {
+        return imageBaseUrl.endsWith("/") ? imageBaseUrl + imagePath : imageBaseUrl + "/" + imagePath;
     }
 
     private void validateIfAlreadyExists(ProductDto productDto) {
