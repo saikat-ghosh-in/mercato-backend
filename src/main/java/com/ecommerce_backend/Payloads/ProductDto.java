@@ -13,8 +13,8 @@ public class ProductDto {
     private final Long productId;
     private final String productName;
     private final boolean active;
-    private final Long categoryId;
-    private final String imagePath;
+    private final String category;
+    private final String imageUrl;
     private final String description;
     private final Integer quantity;
     private final BigDecimal retailPrice;

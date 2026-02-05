@@ -1,5 +1,6 @@
 package com.ecommerce_backend.Service;
 
+import com.ecommerce_backend.Configuration.AppConstants;
 import com.ecommerce_backend.Entity.Category;
 import com.ecommerce_backend.ExceptionHandler.ResourceAlreadyExistsException;
 import com.ecommerce_backend.ExceptionHandler.ResourceNotFoundException;
@@ -7,7 +8,6 @@ import com.ecommerce_backend.Payloads.CategoryDto;
 import com.ecommerce_backend.Payloads.CategoryResponse;
 import com.ecommerce_backend.Repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -19,12 +19,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class CategoryServiceImpl implements CategoryService {
 
-    private final ModelMapper modelMapper;
     private final CategoryRepository categoryRepository;
 
 
@@ -39,21 +39,23 @@ public class CategoryServiceImpl implements CategoryService {
         category.setUpdateUser(categoryDto.getUpdateUser());
 
         Category savedCategory = categoryRepository.save(category);
-        return modelMapper.map(savedCategory, CategoryDto.class);
+        return buildCategoryDto(savedCategory);
     }
 
     @Override
     @Transactional(readOnly = true)
     public CategoryResponse getAllCategories(Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder) {
-        Sort sort = sortingOrder.equalsIgnoreCase("asc")
-                ? Sort.by(sortBy).ascending()
-                : Sort.by(sortBy).descending();
+
+        validateSortBy(sortBy);
+        Sort sort = "desc".equalsIgnoreCase(sortingOrder)
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
         Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sort);
 
         Page<Category> categoryPage = categoryRepository.findAll(pageDetails);
         List<Category> categories = categoryPage.getContent();
         List<CategoryDto> categoryDtoList = categories.stream()
-                .map(category -> modelMapper.map(category, CategoryDto.class))
+                .map(this::buildCategoryDto)
                 .toList();
 
         return CategoryResponse.builder()
@@ -69,7 +71,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     public CategoryDto getCategory(Long categoryId) {
         Category category = getCategoryById(categoryId);
-        return modelMapper.map(category, CategoryDto.class);
+        return buildCategoryDto(category);
     }
 
     @Override
@@ -78,8 +80,8 @@ public class CategoryServiceImpl implements CategoryService {
         validateFields(categoryDto); // throws
 
         String categoryName = categoryDto.getCategoryName();
-        Category categoryByName = categoryRepository.findByCategoryName(categoryName);
-        if (categoryByName != null && !categoryByName.getCategoryId().equals(categoryDto.getCategoryId())) {
+        Optional<Category> categoryByName = categoryRepository.findByCategoryName(categoryName);
+        if (categoryByName.isPresent() && !categoryByName.get().getCategoryId().equals(categoryDto.getCategoryId())) {
             throw new ResourceAlreadyExistsException("Category", "categoryName", categoryName);
         }
 
@@ -88,7 +90,7 @@ public class CategoryServiceImpl implements CategoryService {
         category.setUpdateUser(categoryDto.getUpdateUser());
 
         Category savedCategory = categoryRepository.save(category);
-        return modelMapper.map(savedCategory, CategoryDto.class);
+        return buildCategoryDto(savedCategory);
     }
 
     @Override
@@ -106,6 +108,20 @@ public class CategoryServiceImpl implements CategoryService {
         }
         return categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "categoryId", categoryId));
+    }
+
+    @Override
+    public Category getCategoryByName(String categoryName) {
+        if (categoryName == null) {
+            throw new IllegalArgumentException("categoryName must not be null");
+        }
+        return categoryRepository.findByCategoryName(categoryName)
+                .orElseThrow(() -> new ResourceNotFoundException("Category", "categoryName", categoryName));
+    }
+
+    @Override
+    public boolean existsByCategoryName(String categoryName) {
+        return categoryRepository.existsByCategoryName(categoryName);
     }
 
     @Override
@@ -154,6 +170,15 @@ public class CategoryServiceImpl implements CategoryService {
         return "success";
     }
 
+    private CategoryDto buildCategoryDto(Category category) {
+        return new CategoryDto(
+                category.getCategoryId(),
+                category.getCategoryName(),
+                category.getUpdateUser(),
+                category.getUpdateDate()
+        );
+    }
+
     private void validateFields(CategoryDto categoryDto) {
         String categoryName = categoryDto.getCategoryName();
         if (categoryName == null || categoryName.isBlank()) {
@@ -165,6 +190,12 @@ public class CategoryServiceImpl implements CategoryService {
         String categoryName = categoryDto.getCategoryName();
         if (categoryRepository.existsByCategoryName(categoryName)) {
             throw new ResourceAlreadyExistsException("Category", "categoryName", categoryName);
+        }
+    }
+
+    private void validateSortBy(String sortBy) {
+        if (!AppConstants.ALLOWED_SORT_CATEGORY_FIELDS.contains(sortBy)) {
+            throw new IllegalArgumentException("Invalid sortBy value: " + sortBy);
         }
     }
 }

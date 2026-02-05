@@ -30,8 +30,10 @@ public class ProductController {
     public ResponseEntity<ProductResponse> getAllProducts(@RequestParam(defaultValue = AppConstants.PAGE_NUMBER) Integer pageNumber,
                                                           @RequestParam(defaultValue = AppConstants.PAGE_SIZE) Integer pageSize,
                                                           @RequestParam(defaultValue = AppConstants.SORT_PRODUCTS_BY) String sortBy,
-                                                          @RequestParam(defaultValue = AppConstants.SORTING_ORDER) String sortingOrder) {
-        ProductResponse productResponse = productService.getProducts(pageNumber, pageSize, sortBy, sortingOrder);
+                                                          @RequestParam(defaultValue = AppConstants.SORTING_ORDER) String sortingOrder,
+                                                          @RequestParam(required = false) String category,
+                                                          @RequestParam(required = false) String keyword) {
+        ProductResponse productResponse = productService.getProducts(pageNumber, pageSize, sortBy, sortingOrder, category, keyword);
         return new ResponseEntity<>(productResponse, HttpStatus.OK);
     }
 
@@ -58,26 +60,6 @@ public class ProductController {
                                                          @RequestParam("image") MultipartFile image) throws IOException {
         ProductDto productDto = productService.uploadProductImage(productId, image);
         return new ResponseEntity<>(productDto, HttpStatus.OK);
-    }
-
-    @GetMapping("/public/categories/{categoryId}/products")
-    public ResponseEntity<ProductResponse> getProductsByCategory(@PathVariable Long categoryId,
-                                                                 @RequestParam(defaultValue = AppConstants.PAGE_NUMBER) Integer pageNumber,
-                                                                 @RequestParam(defaultValue = AppConstants.PAGE_SIZE) Integer pageSize,
-                                                                 @RequestParam(defaultValue = AppConstants.SORT_PRODUCTS_BY) String sortBy,
-                                                                 @RequestParam(defaultValue = AppConstants.SORTING_ORDER) String sortingOrder) {
-        ProductResponse productResponse = productService.getProductsByCategory(categoryId, pageNumber, pageSize, sortBy, sortingOrder);
-        return new ResponseEntity<>(productResponse, HttpStatus.OK);
-    }
-
-    @GetMapping("/public/products/keyword/{keyword}")
-    public ResponseEntity<ProductResponse> getProductsByKeyword(@PathVariable String keyword,
-                                                                @RequestParam(defaultValue = AppConstants.PAGE_NUMBER) Integer pageNumber,
-                                                                @RequestParam(defaultValue = AppConstants.PAGE_SIZE) Integer pageSize,
-                                                                @RequestParam(defaultValue = AppConstants.SORT_PRODUCTS_BY) String sortBy,
-                                                                @RequestParam(defaultValue = AppConstants.SORTING_ORDER) String sortingOrder) {
-        ProductResponse productResponse = productService.getProductsByKeyword(keyword, pageNumber, pageSize, sortBy, sortingOrder);
-        return new ResponseEntity<>(productResponse, HttpStatus.OK);
     }
 
     @PostMapping("/admin/products/{productId}/newQuantity/{newQuantity}")

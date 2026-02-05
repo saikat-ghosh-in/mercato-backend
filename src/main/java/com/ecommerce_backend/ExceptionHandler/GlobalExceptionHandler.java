@@ -6,21 +6,26 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.Map;
-
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     // Generic exception handlers
     @ExceptionHandler({Exception.class, IllegalStateException.class})
-    public ResponseEntity<Map<String, String>> handleGeneric(Exception ex) {
+    public ResponseEntity<ApiResponse> handleGeneric(Exception ex) {
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", ex.getMessage()));
+                .body(new ApiResponse(ex.getMessage(), true));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse> handleIllegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse(ex.getMessage(), true));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<Map<String, String>> handleDataIntegrityViolation(
+    public ResponseEntity<ApiResponse> handleDataIntegrityViolation(
             DataIntegrityViolationException ex) {
         String message = "Invalid request data";
 
@@ -53,7 +58,7 @@ public class GlobalExceptionHandler {
         }
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
-                .body(Map.of("error", message));
+                .body(new ApiResponse(message, true));
     }
 
 

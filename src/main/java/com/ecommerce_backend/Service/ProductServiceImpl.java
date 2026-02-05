@@ -18,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,8 +26,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -67,21 +68,65 @@ public class ProductServiceImpl implements ProductService {
         product.setCategory(category);
 
         Product savedProduct = productRepository.save(product);
-        return getProductDto(savedProduct);
+        return buildProductDto(savedProduct);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ProductResponse getProducts(Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder) {
-        Sort sort = sortingOrder.equalsIgnoreCase("asc")
-                ? Sort.by(sortBy).ascending()
-                : Sort.by(sortBy).descending();
-        Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sort);
+    public ProductResponse getProducts(Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder, String categoryName, String keyword) {
 
-        Page<Product> productsPage = productRepository.findAll(pageDetails);
+        validateSortBy(sortBy);
+        boolean sortBySellingPrice = "sellingPrice".equalsIgnoreCase(sortBy);
+
+        Sort sort = Sort.unsorted();
+        if (!sortBySellingPrice) {
+            sort = "desc".equalsIgnoreCase(sortingOrder)
+                    ? Sort.by(sortBy).descending()
+                    : Sort.by(sortBy).ascending();
+        }
+
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, sort);
+
+        Specification<Product> spec = Specification.unrestricted();
+
+        // keyword search: productName OR description (case-insensitive)
+        if (keyword != null && !keyword.isBlank()) {
+            spec = spec.and((root, query, cb) -> {
+                String pattern = "%" + keyword.toLowerCase() + "%";
+
+                return cb.or(
+                        cb.like(cb.lower(root.get("productName")), pattern),
+                        cb.like(cb.lower(root.get("description")), pattern)
+                );
+            });
+        }
+
+        // add category filter
+        if (categoryName != null && categoryService.existsByCategoryName(categoryName)) {
+            spec = spec.and((root, query, cb) ->
+                    cb.equal(root.get("category").get("categoryName"), categoryName)
+            );
+        }
+
+        Page<Product> productsPage = productRepository.findAll(spec, pageable);
         List<Product> products = productsPage.getContent();
+
+        // if sortBy=sellingPrice
+        if (sortBySellingPrice) {
+            Comparator<Product> comparator =
+                    Comparator.comparing(Product::getSellingPrice);
+
+            if ("desc".equalsIgnoreCase(sortingOrder)) {
+                comparator = comparator.reversed();
+            }
+
+            products = products.stream()
+                    .sorted(comparator)
+                    .toList();
+        }
+
         List<ProductDto> productDtoList = products.stream()
-                .map(this::getProductDto)
+                .map(this::buildProductDto)
                 .toList();
 
         return ProductResponse.builder()
@@ -97,7 +142,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public ProductDto getProduct(Long productId) {
         Product product = getProductById(productId);
-        return getProductDto(product);
+        return buildProductDto(product);
     }
 
     @Override
@@ -105,7 +150,7 @@ public class ProductServiceImpl implements ProductService {
     public ProductDto updateProduct(ProductDto productDto) {
 
         Product product = getProductById(productDto.getProductId()); // throws
-        Category category = categoryService.getCategoryById(productDto.getCategoryId()); // throws
+        Category category = categoryService.getCategoryByName(productDto.getCategory()); // throws
 
         product.setProductName(productDto.getProductName());
         product.setActive(productDto.isActive());
@@ -116,7 +161,7 @@ public class ProductServiceImpl implements ProductService {
         product.setCategory(category);
 
         Product savedProduct = productRepository.save(product);
-        return getProductDto(savedProduct);
+        return buildProductDto(savedProduct);
     }
 
     @Override
@@ -144,56 +189,7 @@ public class ProductServiceImpl implements ProductService {
         product.setImagePath(imageFilePath);
 
         Product savedProduct = productRepository.save(product);
-        return getProductDto(savedProduct);
-    }
-
-    @Override
-    public ProductResponse getProductsByCategory(Long categoryId, Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder) {
-
-        Category category = categoryService.getCategoryById(categoryId);
-
-        Sort sort = sortingOrder.equalsIgnoreCase("asc")
-                ? Sort.by(sortBy).ascending()
-                : Sort.by(sortBy).descending();
-        Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sort);
-
-        Page<Product> productsPage = productRepository.findByCategory(pageDetails, category);
-        List<Product> products = productsPage.getContent();
-        List<ProductDto> productDtoList = products.stream()
-                .map(this::getProductDto)
-                .toList();
-
-        return ProductResponse.builder()
-                .content(productDtoList)
-                .pageNumber(productsPage.getNumber())
-                .pageSize(productsPage.getSize())
-                .totalElements(productsPage.getTotalElements())
-                .totalPages(productsPage.getTotalPages())
-                .lastPage(productsPage.isLast())
-                .build();
-    }
-
-    @Override
-    public ProductResponse getProductsByKeyword(String keyword, Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder) {
-        Sort sort = sortingOrder.equalsIgnoreCase("asc")
-                ? Sort.by(sortBy).ascending()
-                : Sort.by(sortBy).descending();
-        Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sort);
-
-        Page<Product> productsPage = productRepository.findByKeyword(keyword, pageDetails);
-        List<Product> products = productsPage.getContent();
-        List<ProductDto> productDtoList = products.stream()
-                .map(this::getProductDto)
-                .toList();
-
-        return ProductResponse.builder()
-                .content(productDtoList)
-                .pageNumber(productsPage.getNumber())
-                .pageSize(productsPage.getSize())
-                .totalElements(productsPage.getTotalElements())
-                .totalPages(productsPage.getTotalPages())
-                .lastPage(productsPage.isLast())
-                .build();
+        return buildProductDto(savedProduct);
     }
 
     @Override
@@ -216,7 +212,7 @@ public class ProductServiceImpl implements ProductService {
         Product product = getProductById(productId);
         product.setQuantity(newQuantity);
         Product savedProduct = productRepository.save(product);
-        return getProductDto(savedProduct);
+        return buildProductDto(savedProduct);
     }
 
     @Override
@@ -258,12 +254,12 @@ public class ProductServiceImpl implements ProductService {
         return userDetailsService.getEcommUserByUsername("seller1");
     }
 
-    private ProductDto getProductDto(Product product) {
+    private ProductDto buildProductDto(Product product) {
         return new ProductDto(
                 product.getProductId(),
                 product.getProductName(),
                 product.isActive(),
-                product.getCategory().getCategoryId(),
+                product.getCategory().getCategoryName(),
                 constructImageUrl(product.getImagePath()),
                 product.getDescription(),
                 product.getQuantity(),
@@ -282,6 +278,12 @@ public class ProductServiceImpl implements ProductService {
         String productName = productDto.getProductName();
         if (productRepository.existsByProductName(productName)) {
             throw new ResourceAlreadyExistsException("Product", "productName", productName);
+        }
+    }
+
+    private void validateSortBy(String sortBy) {
+        if (!AppConstants.ALLOWED_SORT_PRODUCT_FIELDS.contains(sortBy)) {
+            throw new IllegalArgumentException("Invalid sortBy value: " + sortBy);
         }
     }
 }

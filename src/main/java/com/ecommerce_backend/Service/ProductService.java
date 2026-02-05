@@ -2,7 +2,6 @@ package com.ecommerce_backend.Service;
 
 import com.ecommerce_backend.Entity.EcommUser;
 import com.ecommerce_backend.Entity.Product;
-import com.ecommerce_backend.Payloads.EcommUserDto;
 import com.ecommerce_backend.Payloads.ProductDto;
 import com.ecommerce_backend.Payloads.ProductResponse;
 import org.springframework.web.multipart.MultipartFile;
@@ -13,7 +12,7 @@ public interface ProductService {
 
     ProductDto addProduct(Long categoryId, ProductDto productDto);
 
-    ProductResponse getProducts(Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder);
+    ProductResponse getProducts(Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder, String categoryName, String keyword);
 
     ProductDto getProduct(Long productId);
 
@@ -22,10 +21,6 @@ public interface ProductService {
     void deleteProduct(Long productId);
 
     ProductDto uploadProductImage(Long productId, MultipartFile image) throws IOException;
-
-    ProductResponse getProductsByCategory(Long categoryId, Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder);
-
-    ProductResponse getProductsByKeyword(String keyword, Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder);
 
     Product getProductById(Long productId);
 
