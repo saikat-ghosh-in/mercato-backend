@@ -85,8 +85,6 @@ public class ProductServiceImpl implements ProductService {
                     : Sort.by(sortBy).ascending();
         }
 
-        Pageable pageable = PageRequest.of(pageNumber, pageSize, sort);
-
         Specification<Product> spec = Specification.unrestricted();
 
         // keyword search: productName OR description (case-insensitive)
@@ -108,6 +106,17 @@ public class ProductServiceImpl implements ProductService {
             );
         }
 
+        // if request pageNumber >= totalPages, return last page
+        long totalElements = productRepository.count(spec);
+        int totalPages = (int) Math.ceil((double) totalElements / pageSize);
+
+        if (totalPages == 0) {
+            pageNumber = 0;
+        } else if (pageNumber >= totalPages) {
+            pageNumber = totalPages - 1;
+        }
+
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, sort);
         Page<Product> productsPage = productRepository.findAll(spec, pageable);
         List<Product> products = productsPage.getContent();
 

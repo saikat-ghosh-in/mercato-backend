@@ -66,8 +66,8 @@ public class AddressServiceImpl implements AddressService {
 
     @Override
     @Transactional
-    public AddressDto updateAddress(AddressDto addressDto) {
-        Address address = getAddressById(addressDto.getAddressId());
+    public AddressDto updateAddress(Long addressId, AddressDto addressDto) {
+        Address address = getAddressById(addressId);
         EcommUser currentUser = authUtil.getLoggedInUser();
 
         if (address.getUser() == null) {

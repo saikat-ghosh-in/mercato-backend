@@ -27,7 +27,7 @@ public class AuthController {
             return authService.authenticateUser(loginRequest);
         } catch (AuthenticationException e) {
             Map<String, Object> errorMap = Map.of(
-                    "message", "Bad credentials",
+                    "message", e.getMessage(),
                     "status", false
             );
             return new ResponseEntity<>(errorMap, HttpStatus.UNAUTHORIZED);
