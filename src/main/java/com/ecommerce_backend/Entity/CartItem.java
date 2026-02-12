@@ -1,17 +1,17 @@
 package com.ecommerce_backend.Entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.Min;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Optional;
 
 @Entity
 @Table(name = "ecomm_cart_items")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -30,16 +30,18 @@ public class CartItem {
     )
     private Long cartItemId;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "cart_id", nullable = false)
     private Cart cart;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
     @Column(nullable = false)
+    @Min(1)
     private Integer quantity;
+
 
     @Transient
     public BigDecimal getItemPrice() {
@@ -54,5 +56,29 @@ public class CartItem {
         return getItemPrice()
                 .multiply(BigDecimal.valueOf(quantity))
                 .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public void increaseQuantity(int qty) {
+        if (qty <= 0) {
+            throw new IllegalArgumentException("Quantity must be greater than 0");
+        }
+        this.quantity += qty;
+    }
+
+    public void updateQuantity(int qty) {
+        if (qty <= 0) {
+            throw new IllegalArgumentException("Quantity must be greater than 0");
+        }
+        this.quantity = qty;
+    }
+
+    public void decreaseQuantity(int qty) {
+        if (qty <= 0) {
+            throw new IllegalArgumentException("Quantity must be greater than 0");
+        }
+        if (this.quantity < qty) {
+            throw new IllegalStateException("Cannot reduce quantity below zero");
+        }
+        this.quantity -= qty;
     }
 }

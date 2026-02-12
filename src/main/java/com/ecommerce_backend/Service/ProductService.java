@@ -2,8 +2,8 @@ package com.ecommerce_backend.Service;
 
 import com.ecommerce_backend.Entity.EcommUser;
 import com.ecommerce_backend.Entity.Product;
-import com.ecommerce_backend.Payloads.ProductDto;
-import com.ecommerce_backend.Payloads.ProductResponse;
+import com.ecommerce_backend.Payloads.Response.ProductDto;
+import com.ecommerce_backend.Payloads.Response.ProductResponse;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -22,9 +22,11 @@ public interface ProductService {
 
     ProductDto uploadProductImage(Long productId, MultipartFile image) throws IOException;
 
-    Product getProductById(Long productId);
+    Product getProductByIdForUpdate(Long productId);
 
     ProductDto updateProductInventory(Long productId, Integer newQuantity);
+
+    void sourceProduct(Long productId, Integer requestedQuantity);
 
     String addDummyProducts();
 

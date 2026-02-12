@@ -3,7 +3,7 @@ package com.ecommerce_backend.Service;
 import com.ecommerce_backend.Entity.Fulfillment.Order;
 import com.ecommerce_backend.Entity.Fulfillment.Payment;
 import com.ecommerce_backend.Entity.Fulfillment.PaymentMethod;
-import com.ecommerce_backend.Payloads.PaymentDto;
+import com.ecommerce_backend.Payloads.Response.PaymentDto;
 
 public interface PaymentService {
 

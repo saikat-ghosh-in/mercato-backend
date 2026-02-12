@@ -1,7 +1,7 @@
 package com.ecommerce_backend.Service;
 
-import com.ecommerce_backend.Payloads.OrderDto;
-import com.ecommerce_backend.Payloads.OrderRequestDto;
+import com.ecommerce_backend.Payloads.Response.OrderDto;
+import com.ecommerce_backend.Payloads.Response.OrderRequestDto;
 
 import java.util.List;
 

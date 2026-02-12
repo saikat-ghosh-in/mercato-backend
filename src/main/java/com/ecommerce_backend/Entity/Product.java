@@ -1,5 +1,6 @@
 package com.ecommerce_backend.Entity;
 
+import com.ecommerce_backend.ExceptionHandler.InsufficientInventoryException;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.Data;
@@ -27,6 +28,8 @@ public class Product {
     )
     private Long productId;
 
+    @Version
+    private Long version;
 
     @NotBlank
     @Size(min = 4, message = "Product name must be more than 3 characters")
@@ -78,5 +81,27 @@ public class Product {
         return retailPrice
                 .multiply(BigDecimal.ONE.subtract(discountRate))
                 .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    @Transient
+    public void adjustInventory(int delta) {
+        int newQty = this.quantity + delta;
+        if (newQty < 0) {
+            throw new InsufficientInventoryException(this.productName, this.quantity);
+        }
+        this.quantity = newQty;
+    }
+
+    @Transient
+    public void setInventoryAbsolute(int newQuantity) {
+        if (newQuantity < 0) {
+            throw new IllegalArgumentException("Inventory cannot be negative");
+        }
+        this.quantity = newQuantity;
+    }
+
+    @Transient
+    public boolean hasSufficientInventory(int requestedQty) {
+        return this.quantity >= requestedQty;
     }
 }

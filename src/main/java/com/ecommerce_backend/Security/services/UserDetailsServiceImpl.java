@@ -1,7 +1,7 @@
 package com.ecommerce_backend.Security.services;
 
 import com.ecommerce_backend.Entity.EcommUser;
-import com.ecommerce_backend.Payloads.EcommUserDto;
+import com.ecommerce_backend.Payloads.Response.EcommUserDto;
 import com.ecommerce_backend.Repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetailsService;

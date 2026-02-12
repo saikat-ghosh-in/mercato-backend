@@ -1,8 +1,8 @@
 package com.ecommerce_backend.Service;
 
 import com.ecommerce_backend.Entity.Category;
-import com.ecommerce_backend.Payloads.CategoryDto;
-import com.ecommerce_backend.Payloads.CategoryResponse;
+import com.ecommerce_backend.Payloads.Response.CategoryDto;
+import com.ecommerce_backend.Payloads.Response.CategoryResponse;
 
 public interface CategoryService {
 

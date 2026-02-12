@@ -4,10 +4,11 @@ import com.ecommerce_backend.Configuration.AppConstants;
 import com.ecommerce_backend.Entity.Category;
 import com.ecommerce_backend.Entity.EcommUser;
 import com.ecommerce_backend.Entity.Product;
+import com.ecommerce_backend.ExceptionHandler.InsufficientInventoryException;
 import com.ecommerce_backend.ExceptionHandler.ResourceAlreadyExistsException;
 import com.ecommerce_backend.ExceptionHandler.ResourceNotFoundException;
-import com.ecommerce_backend.Payloads.ProductDto;
-import com.ecommerce_backend.Payloads.ProductResponse;
+import com.ecommerce_backend.Payloads.Response.ProductDto;
+import com.ecommerce_backend.Payloads.Response.ProductResponse;
 import com.ecommerce_backend.Repository.CategoryRepository;
 import com.ecommerce_backend.Repository.ProductRepository;
 import com.ecommerce_backend.Security.services.UserDetailsServiceImpl;
@@ -150,7 +151,11 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public ProductDto getProduct(Long productId) {
-        Product product = getProductById(productId);
+        if (productId == null) {
+            throw new IllegalArgumentException("productId must not be null!");
+        }
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
         return buildProductDto(product);
     }
 
@@ -158,7 +163,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public ProductDto updateProduct(ProductDto productDto) {
 
-        Product product = getProductById(productDto.getProductId()); // throws
+        Product product = getProductByIdForUpdate(productDto.getProductId()); // throws
         Category category = categoryService.getCategoryByName(productDto.getCategory()); // throws
 
         product.setProductName(productDto.getProductName());
@@ -177,7 +182,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public void deleteProduct(Long productId) {
-        Product product = getProductById(productId);
+        Product product = getProductByIdForUpdate(productId);
         productRepository.delete(product);
     }
 
@@ -192,7 +197,7 @@ public class ProductServiceImpl implements ProductService {
             throw new IllegalArgumentException("Image size must not exceed 100 KB");
         }
 
-        Product product = getProductById(productId);
+        Product product = getProductByIdForUpdate(productId);
 
         String imageFilePath = fileService.uploadProductImage(productsImageFolder, image, productId);
         product.setImagePath(imageFilePath);
@@ -202,23 +207,22 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public Product getProductById(Long productId) {
+    public Product getProductByIdForUpdate(Long productId) {
         if (productId == null) {
             throw new IllegalArgumentException("productId must not be null!");
         }
-        return productRepository.findById(productId)
+        return productRepository.findByIdForUpdate(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
     }
 
     @Override
     @Transactional
     public ProductDto updateProductInventory(Long productId, Integer newQuantity) {
-
         if (newQuantity == null || newQuantity < 0) {
-            throw new IllegalArgumentException("Quantity must be a non-negative Integer.");
+            throw new IllegalArgumentException("Inventory cannot be negative");
         }
 
-        Product product = getProductById(productId);
+        Product product = getProductByIdForUpdate(productId);
         product.setQuantity(newQuantity);
         Product savedProduct = productRepository.save(product);
         return buildProductDto(savedProduct);
@@ -226,8 +230,23 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public String addDummyProducts() {
+    public void sourceProduct(Long productId, Integer requestedQuantity) {
+        if (requestedQuantity == null || requestedQuantity < 0) {
+            throw new IllegalArgumentException("Inventory cannot be negative");
+        }
 
+        Product product = getProductByIdForUpdate(productId);
+        if (product.getQuantity() < requestedQuantity) {
+            throw new InsufficientInventoryException(product.getProductName(), product.getQuantity());
+        }
+
+        product.setQuantity(product.getQuantity() - requestedQuantity);
+        productRepository.save(product);
+    }
+
+    @Override
+    @Transactional
+    public String addDummyProducts() {
         EcommUser seller = userDetailsService.getEcommUserByUsername("seller1"); // throws
 
         List<Category> categories = categoryRepository.findAll();

@@ -1,20 +1,18 @@
 package com.ecommerce_backend.Entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.DecimalMax;
-import jakarta.validation.constraints.DecimalMin;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Entity
 @Table(name = "ecomm_carts")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class Cart {
@@ -32,7 +30,7 @@ public class Cart {
     )
     private Long cartId;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     private EcommUser user;
 
@@ -43,32 +41,75 @@ public class Cart {
     )
     private List<CartItem> cartItems = new ArrayList<>();
 
-    @DecimalMin(value = "0.00", message = "Discount must be at least 0%")
-    @DecimalMax(value = "99.99", message = "Discount cannot exceed 99.99%")
-    @Column(precision = 5, scale = 2)
-    private BigDecimal discountPercent = BigDecimal.ZERO;
 
     @Transient
     public BigDecimal getSubtotal() {
         return cartItems.stream()
-                .map(CartItem::getLineTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    @Transient
-    public BigDecimal getDiscountAmount() {
-        BigDecimal discountRate = discountPercent.movePointLeft(2); // 10 → 0.10
-
-        return getSubtotal()
-                .multiply(discountRate)
+                .map(cartItem ->
+                        Optional.ofNullable(cartItem.getLineTotal())
+                                .orElse(BigDecimal.ZERO))
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(2, RoundingMode.HALF_UP);
     }
 
     @Transient
-    public BigDecimal getTotalPayable() {
-        return getSubtotal()
-                .subtract(getDiscountAmount())
-                .max(BigDecimal.ZERO);
+    public void addProduct(Product product, int quantity) {
+        validateQuantity(quantity);
+        findItemByProductId(product.getProductId())
+                .ifPresentOrElse(
+                        cartItem -> cartItem.increaseQuantity(quantity),
+                        () -> addCartItem(
+                                CartItem.builder()
+                                        .cart(this)
+                                        .product(product)
+                                        .quantity(quantity)
+                                        .build()
+                        )
+                );
+    }
+
+    @Transient
+    public void updateProductQuantity(Long productId, int quantity) {
+        CartItem cartItem = findItemByProductId(productId)
+                .orElseThrow(() ->
+                        new IllegalStateException("Product not in cart"));
+        if (quantity <= 0) {
+            removeCartItem(cartItem);
+            return;
+        }
+        cartItem.updateQuantity(quantity);
+    }
+
+    @Transient
+    public void removeProduct(Long productId) {
+        findItemByProductId(productId)
+                .ifPresent(this::removeCartItem);
+    }
+
+    public void addCartItem(CartItem cartItem) {
+        if (cartItem == null) return;
+        cartItems.add(cartItem);
+        cartItem.setCart(this);
+    }
+
+    public void removeCartItem(CartItem cartItem) {
+        if (cartItem == null) return;
+        cartItems.remove(cartItem);
+        cartItem.setCart(null);
+    }
+
+    @Transient
+    public Optional<CartItem> findItemByProductId(Long productId) {
+        return cartItems.stream()
+                .filter(cartItem -> cartItem.getProduct()
+                        .getProductId()
+                        .equals(productId))
+                .findFirst();
+    }
+
+    private void validateQuantity(int quantity) {
+        if (quantity <= 0) {
+            throw new IllegalArgumentException("Quantity must be greater than 0");
+        }
     }
 }
-

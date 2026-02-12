@@ -1,6 +1,5 @@
-package com.ecommerce_backend.Payloads;
+package com.ecommerce_backend.Payloads.Response;
 
-import jakarta.persistence.Column;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 

@@ -61,28 +61,11 @@ public class GlobalExceptionHandler {
                 .body(new ApiResponse(message, true));
     }
 
-
-    // Custom exception handlers
-    @ExceptionHandler(ResourceAlreadyExistsException.class)
-    public ResponseEntity<ApiResponse> handleResourceAlreadyExists(ResourceAlreadyExistsException ex) {
-        ApiResponse apiResponse = new ApiResponse(ex.getMessage(), true);
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ApiResponse> handleBusinessException(BusinessException ex) {
         return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(apiResponse);
-    }
-
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ApiResponse> handleResourceNotFound(ResourceNotFoundException ex) {
-        ApiResponse apiResponse = new ApiResponse(ex.getMessage(), true);
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(apiResponse);
-    }
-
-    @ExceptionHandler(GenericCustomException.class)
-    public ResponseEntity<ApiResponse> handleGenericCustomException(GenericCustomException ex) {
-        ApiResponse apiResponse = new ApiResponse(ex.getMessage(), false);
-        return new ResponseEntity<>(apiResponse, HttpStatus.BAD_REQUEST);
+                .status(ex.getStatus())
+                .body(new ApiResponse(ex.getMessage(), true));
     }
 }
 

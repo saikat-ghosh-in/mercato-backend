@@ -2,9 +2,11 @@ package com.ecommerce_backend.Service;
 
 import com.ecommerce_backend.Entity.*;
 import com.ecommerce_backend.Entity.Fulfillment.*;
-import com.ecommerce_backend.ExceptionHandler.GenericCustomException;
+import com.ecommerce_backend.ExceptionHandler.CustomBadRequestException;
 import com.ecommerce_backend.ExceptionHandler.ResourceNotFoundException;
-import com.ecommerce_backend.Payloads.*;
+import com.ecommerce_backend.Payloads.Response.OrderDto;
+import com.ecommerce_backend.Payloads.Response.OrderLineDto;
+import com.ecommerce_backend.Payloads.Response.OrderRequestDto;
 import com.ecommerce_backend.Repository.OrderRepository;
 import com.ecommerce_backend.Utils.AuthUtil;
 import jakarta.transaction.Transactional;
@@ -32,12 +34,12 @@ public class OrderServiceImpl implements OrderService {
     public OrderDto placeOrder(OrderRequestDto orderRequestDto) {
 
         EcommUser currentUser = authUtil.getLoggedInUser();
-        Cart cart = cartService.getCartByEmail(currentUser.getEmail());
+        Cart cart = cartService.getCartByUser(currentUser);
 
         Order order = buildOrder(cart, orderRequestDto, currentUser);
 
         orderRepository.save(order);
-        cartService.deleteCart(cart.getCartId());
+        cartService.deleteCart();
 
         return buildOrderDto(order);
     }
@@ -82,7 +84,7 @@ public class OrderServiceImpl implements OrderService {
 
         List<CartItem> cartItems = cart.getCartItems();
         if (cartItems.isEmpty()) {
-            throw new GenericCustomException("Cart is empty");
+            throw new CustomBadRequestException("Cart is empty");
         }
 
         Order order = new Order();
@@ -124,10 +126,8 @@ public class OrderServiceImpl implements OrderService {
         }
 
         order.setCurrency("INR");
-        order.setSubTotal(cart.getTotalPayable()); // have cart.getSubTotal() when below design in done
         order.setTaxAmount(BigDecimal.ZERO); // will design cart to provide this
         order.setShippingFee(BigDecimal.ZERO); // will design cart to provide this
-        order.setTotalAmount(cart.getTotalPayable());
 
         paymentService.initiatePayment(order, PaymentMethod.getFromString(orderRequestDto.getPaymentMethod()));
 

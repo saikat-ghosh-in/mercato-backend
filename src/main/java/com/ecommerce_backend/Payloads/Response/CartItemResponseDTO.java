@@ -1,4 +1,4 @@
-package com.ecommerce_backend.Payloads;
+package com.ecommerce_backend.Payloads.Response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 
 @Data
 @AllArgsConstructor
-public class CartItemDto {
+public class CartItemResponseDTO {
 
     private final Long cartItemId;
     private final Long cartId;

@@ -1,8 +1,7 @@
-package com.ecommerce_backend.Payloads;
+package com.ecommerce_backend.Payloads.Response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 

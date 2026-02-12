@@ -1,7 +1,8 @@
 package com.ecommerce_backend.Controller;
 
-import com.ecommerce_backend.Payloads.CartDto;
-import com.ecommerce_backend.Security.services.AuthService;
+import com.ecommerce_backend.Payloads.Request.CartItemRequestDTO;
+import com.ecommerce_backend.Payloads.Request.CartRequestDTO;
+import com.ecommerce_backend.Payloads.Response.CartResponseDTO;
 import com.ecommerce_backend.Service.CartService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -15,47 +16,48 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CartController {
 
-    private final AuthService authService;
     private final CartService cartService;
 
-    @PostMapping("/carts/products/{productId}/quantity/{quantity}")
-    public ResponseEntity<CartDto> addProductToCart(@PathVariable Long productId,
-                                                    @PathVariable Integer quantity) {
-        CartDto cartDto = cartService.addProductToCart(productId, quantity);
-        return new ResponseEntity<>(cartDto, HttpStatus.CREATED);
+    @PostMapping("/users/cart/add")
+    public ResponseEntity<CartResponseDTO> addProductToCart(@RequestBody CartRequestDTO cartRequestDTO) {
+        CartResponseDTO cartResponseDTO = cartService.addProductToCart(cartRequestDTO);
+        return new ResponseEntity<>(cartResponseDTO, HttpStatus.OK);
     }
 
-    @GetMapping("/carts")
-    public ResponseEntity<List<CartDto>> getCarts() {
-        List<CartDto> cartDtoList = cartService.getAllCarts();
-        return new ResponseEntity<>(cartDtoList, HttpStatus.OK);
+    @GetMapping("/users/cart")
+    public ResponseEntity<CartResponseDTO> getCart() {
+        CartResponseDTO cartResponseDTO = cartService.getCart();
+        return new ResponseEntity<>(cartResponseDTO, HttpStatus.OK);
     }
 
-    @GetMapping("/carts/users/cart")
-    public ResponseEntity<CartDto> getCurrentUserCart() {
-        CartDto cartDto = cartService.getCurrentUserCart();
-        return new ResponseEntity<>(cartDto, HttpStatus.OK);
+    @PutMapping("/users/cart")
+    public ResponseEntity<CartResponseDTO> updateProductQuantityInCart(@RequestBody CartItemRequestDTO cartItemRequestDTO) {
+
+        CartResponseDTO cartResponseDTO = cartService.updateProductQuantityInCart(cartItemRequestDTO);
+        return new ResponseEntity<>(cartResponseDTO, HttpStatus.OK);
     }
 
-    @PutMapping("/carts/products/{productId}/quantity/{newQuantity}")
-    public ResponseEntity<CartDto> updateCartProduct(@PathVariable Long productId,
-                                                     @PathVariable Integer newQuantity) {
-
-        CartDto cartDto = cartService.updateProductQuantityInCart(productId, newQuantity);
-
-        return new ResponseEntity<>(cartDto, HttpStatus.OK);
-    }
-
-    @DeleteMapping("/carts/{cartId}/product/{productId}")
-    public ResponseEntity<String> deleteProductFromCart(@PathVariable Long cartId,
-                                                        @PathVariable Long productId) {
-        cartService.deleteProductFromCart(cartId, productId);
+    @DeleteMapping("users/cart/remove/{productId}")
+    public ResponseEntity<String> deleteProductFromCart(@PathVariable Long productId) {
+        cartService.deleteProductFromCart(productId);
         return new ResponseEntity<>("Product removed from the cart.", HttpStatus.OK);
     }
 
-    @DeleteMapping("/carts/{cartId}")
-    public ResponseEntity<String> deleteCart(@PathVariable Long cartId) {
-        cartService.deleteCart(cartId);
+    @DeleteMapping("/users/cart")
+    public ResponseEntity<String> deleteCart() {
+        cartService.deleteCart();
         return new ResponseEntity<>("Cart has been deleted.", HttpStatus.OK);
+    }
+
+    @GetMapping("/admin/carts")
+    public ResponseEntity<List<CartResponseDTO>> getAllCarts() {
+        List<CartResponseDTO> cartResponseDTOList = cartService.getAllCarts();
+        return new ResponseEntity<>(cartResponseDTOList, HttpStatus.OK);
+    }
+
+    @GetMapping("/admin/carts/{cartId}")
+    public ResponseEntity<CartResponseDTO> getCartById(@PathVariable Long cartId) {
+        CartResponseDTO cartResponseDTO = cartService.getCartById(cartId);
+        return new ResponseEntity<>(cartResponseDTO, HttpStatus.OK);
     }
 }

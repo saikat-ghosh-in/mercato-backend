@@ -1,8 +1,8 @@
 package com.ecommerce_backend.Controller;
 
 import com.ecommerce_backend.Configuration.AppConstants;
-import com.ecommerce_backend.Payloads.ProductDto;
-import com.ecommerce_backend.Payloads.ProductResponse;
+import com.ecommerce_backend.Payloads.Response.ProductDto;
+import com.ecommerce_backend.Payloads.Response.ProductResponse;
 import com.ecommerce_backend.Service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

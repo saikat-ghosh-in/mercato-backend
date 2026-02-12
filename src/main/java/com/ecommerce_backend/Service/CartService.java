@@ -1,22 +1,28 @@
 package com.ecommerce_backend.Service;
 
 import com.ecommerce_backend.Entity.Cart;
-import com.ecommerce_backend.Payloads.CartDto;
+import com.ecommerce_backend.Entity.EcommUser;
+import com.ecommerce_backend.Payloads.Request.CartItemRequestDTO;
+import com.ecommerce_backend.Payloads.Request.CartRequestDTO;
+import com.ecommerce_backend.Payloads.Response.CartResponseDTO;
 
 import java.util.List;
 
 public interface CartService {
-    CartDto addProductToCart(Long productId, Integer quantity);
 
-    List<CartDto> getAllCarts();
+    CartResponseDTO addProductToCart(CartRequestDTO cartRequestDTO);
 
-    CartDto getCurrentUserCart();
+    CartResponseDTO getCart();
 
-    CartDto updateProductQuantityInCart(Long productId, Integer newQuantity);
+    Cart getCartByUser(EcommUser user);
 
-    void deleteProductFromCart(Long cartId, Long productId);
+    CartResponseDTO updateProductQuantityInCart(CartItemRequestDTO cartItemRequestDTO);
 
-    void deleteCart(Long cartId);
+    void deleteProductFromCart(Long productId);
 
-    Cart getCartByEmail(String email);
+    void deleteCart();
+
+    List<CartResponseDTO> getAllCarts();
+
+    CartResponseDTO getCartById(Long cartId);
 }

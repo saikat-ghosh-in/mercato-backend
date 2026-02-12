@@ -1,4 +1,4 @@
-package com.ecommerce_backend.Payloads;
+package com.ecommerce_backend.Payloads.Response;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
