@@ -18,8 +18,6 @@ public interface CategoryService {
 
     Category getCategoryById(Long categoryId);
 
-    Category getCategoryByName(String categoryName);
-
     boolean existsByCategoryName(String categoryName);
 
     String addDummyCategories();

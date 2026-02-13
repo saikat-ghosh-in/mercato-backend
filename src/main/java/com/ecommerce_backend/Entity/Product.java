@@ -29,6 +29,7 @@ public class Product {
     private Long productId;
 
     @Version
+    @Column(nullable = false)
     private Long version;
 
     @NotBlank
@@ -63,7 +64,7 @@ public class Product {
     private BigDecimal discountPercent = BigDecimal.ZERO;
 
     @NotNull(message = "Category is required")
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
@@ -84,24 +85,25 @@ public class Product {
     }
 
     @Transient
-    public void adjustInventory(int delta) {
-        int newQty = this.quantity + delta;
-        if (newQty < 0) {
-            throw new InsufficientInventoryException(this.productName, this.quantity);
+    public void adjustInventory(Integer delta) {
+        if (delta == null) {
+            throw new IllegalArgumentException("Inventory adjustment cannot be null");
         }
-        this.quantity = newQty;
-    }
-
-    @Transient
-    public void setInventoryAbsolute(int newQuantity) {
+        int newQuantity = this.quantity + delta;
         if (newQuantity < 0) {
-            throw new IllegalArgumentException("Inventory cannot be negative");
+            throw new InsufficientInventoryException(this.productName, this.quantity);
         }
         this.quantity = newQuantity;
     }
 
     @Transient
-    public boolean hasSufficientInventory(int requestedQty) {
-        return this.quantity >= requestedQty;
+    public void setInventoryAbsolute(Integer newQuantity) {
+        if (newQuantity == null) {
+            throw new IllegalArgumentException("Inventory cannot be null");
+        }
+        if (newQuantity < 0) {
+            throw new IllegalArgumentException("Inventory cannot be negative");
+        }
+        this.quantity = newQuantity;
     }
 }

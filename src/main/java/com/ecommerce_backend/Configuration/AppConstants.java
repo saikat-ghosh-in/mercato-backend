@@ -1,6 +1,5 @@
 package com.ecommerce_backend.Configuration;
 
-import java.math.BigDecimal;
 import java.util.Set;
 
 public class AppConstants {
@@ -24,7 +23,4 @@ public class AppConstants {
     );
 
     public static final String PRODUCT_IMAGE_PATH_PREFIX = "products/";
-
-    public static final BigDecimal TAX_RATE = new BigDecimal("0.18"); // 18%
-    public static final BigDecimal SHIPPING_FEE = new BigDecimal("50.00"); // INR
 }

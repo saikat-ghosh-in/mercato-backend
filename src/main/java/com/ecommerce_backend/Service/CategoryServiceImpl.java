@@ -111,15 +111,6 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    public Category getCategoryByName(String categoryName) {
-        if (categoryName == null) {
-            throw new IllegalArgumentException("categoryName must not be null");
-        }
-        return categoryRepository.findByCategoryName(categoryName)
-                .orElseThrow(() -> new ResourceNotFoundException("Category", "categoryName", categoryName));
-    }
-
-    @Override
     public boolean existsByCategoryName(String categoryName) {
         return categoryRepository.existsByCategoryName(categoryName);
     }

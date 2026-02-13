@@ -10,7 +10,7 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 public class ProductResponse {
-    private List<ProductDto> content;
+    private List<ProductResponseDTO> content;
     private Integer pageNumber;
     private Integer pageSize;
     private Long totalElements;

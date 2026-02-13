@@ -2,29 +2,33 @@ package com.ecommerce_backend.Service;
 
 import com.ecommerce_backend.Entity.EcommUser;
 import com.ecommerce_backend.Entity.Product;
-import com.ecommerce_backend.Payloads.Response.ProductDto;
+import com.ecommerce_backend.Payloads.Request.ProductRequestDTO;
+import com.ecommerce_backend.Payloads.Request.ProductSupplyUpdateRequestDTO;
+import com.ecommerce_backend.Payloads.Response.ProductResponseDTO;
 import com.ecommerce_backend.Payloads.Response.ProductResponse;
+import com.ecommerce_backend.Payloads.Response.ProductSupplyUpdateResponseDTO;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.List;
 
 public interface ProductService {
 
-    ProductDto addProduct(Long categoryId, ProductDto productDto);
+    ProductResponseDTO addProduct(Long categoryId, ProductRequestDTO productRequestDTO);
 
     ProductResponse getProducts(Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder, String categoryName, String keyword);
 
-    ProductDto getProduct(Long productId);
+    ProductResponseDTO getProduct(Long productId);
 
-    ProductDto updateProduct(ProductDto productDto);
+    ProductResponseDTO updateProduct(Long productId, Long categoryId, ProductRequestDTO productRequestDTO);
 
     void deleteProduct(Long productId);
 
-    ProductDto uploadProductImage(Long productId, MultipartFile image) throws IOException;
+    ProductResponseDTO uploadProductImage(Long productId, MultipartFile image) throws IOException;
 
     Product getProductByIdForUpdate(Long productId);
 
-    ProductDto updateProductInventory(Long productId, Integer newQuantity);
+    List<ProductSupplyUpdateResponseDTO> updateProductInventory(List<ProductSupplyUpdateRequestDTO> productSupplyUpdateRequestDTOs);
 
     void sourceProduct(Long productId, Integer requestedQuantity);
 

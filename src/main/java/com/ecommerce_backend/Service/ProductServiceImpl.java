@@ -4,14 +4,19 @@ import com.ecommerce_backend.Configuration.AppConstants;
 import com.ecommerce_backend.Entity.Category;
 import com.ecommerce_backend.Entity.EcommUser;
 import com.ecommerce_backend.Entity.Product;
+import com.ecommerce_backend.Entity.SupplyType;
 import com.ecommerce_backend.ExceptionHandler.InsufficientInventoryException;
 import com.ecommerce_backend.ExceptionHandler.ResourceAlreadyExistsException;
 import com.ecommerce_backend.ExceptionHandler.ResourceNotFoundException;
-import com.ecommerce_backend.Payloads.Response.ProductDto;
+import com.ecommerce_backend.Payloads.Request.ProductRequestDTO;
+import com.ecommerce_backend.Payloads.Request.ProductSupplyUpdateRequestDTO;
+import com.ecommerce_backend.Payloads.Response.ProductResponseDTO;
 import com.ecommerce_backend.Payloads.Response.ProductResponse;
+import com.ecommerce_backend.Payloads.Response.ProductSupplyUpdateResponseDTO;
 import com.ecommerce_backend.Repository.CategoryRepository;
 import com.ecommerce_backend.Repository.ProductRepository;
 import com.ecommerce_backend.Security.services.UserDetailsServiceImpl;
+import com.ecommerce_backend.Utils.AuthUtil;
 import com.ecommerce_backend.Utils.FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,24 +54,27 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
     private final UserDetailsServiceImpl userDetailsService;
     private final FileService fileService;
+    private final AuthUtil authUtil;
 
 
     @Override
     @Transactional
-    public ProductDto addProduct(Long categoryId, ProductDto productDto) {
+    public ProductResponseDTO addProduct(Long categoryId, ProductRequestDTO productRequestDTO) {
 
-        validateIfAlreadyExists(productDto); // throws
+        validateIfAlreadyExists(productRequestDTO.getProductName()); // throws
         Category category = categoryService.getCategoryById(categoryId); // throws
+        EcommUser user = authUtil.getLoggedInUser();
 
         Product product = new Product();
-        product.setProductName(productDto.getProductName());
-        product.setActive(productDto.isActive());
+        product.setProductName(productRequestDTO.getProductName());
+        product.setActive(productRequestDTO.isActive());
         product.setImagePath(AppConstants.PRODUCT_IMAGE_PATH_PREFIX + placeholderImageName);
-        product.setDescription(productDto.getDescription());
-        product.setQuantity(productDto.getQuantity());
-        product.setRetailPrice(productDto.getRetailPrice());
-        product.setDiscountPercent(productDto.getDiscountPercent());
+        product.setDescription(productRequestDTO.getDescription());
+        product.setQuantity(productRequestDTO.getQuantity());
+        product.setRetailPrice(productRequestDTO.getRetailPrice());
+        product.setDiscountPercent(productRequestDTO.getDiscountPercent());
         product.setCategory(category);
+        product.setUser(user);
 
         Product savedProduct = productRepository.save(product);
         return buildProductDto(savedProduct);
@@ -88,7 +96,7 @@ public class ProductServiceImpl implements ProductService {
 
         Specification<Product> spec = Specification.unrestricted();
 
-        // keyword search: productName OR description (case-insensitive)
+        /* keyword search: productName OR description (case-insensitive) */
         if (keyword != null && !keyword.isBlank()) {
             spec = spec.and((root, query, cb) -> {
                 String pattern = "%" + keyword.toLowerCase() + "%";
@@ -100,14 +108,14 @@ public class ProductServiceImpl implements ProductService {
             });
         }
 
-        // add category filter
+        /* add category filter */
         if (categoryName != null && categoryService.existsByCategoryName(categoryName)) {
             spec = spec.and((root, query, cb) ->
                     cb.equal(root.get("category").get("categoryName"), categoryName)
             );
         }
 
-        // if request pageNumber >= totalPages, return last page
+        /* if request pageNumber >= totalPages, return last page */
         long totalElements = productRepository.count(spec);
         int totalPages = (int) Math.ceil((double) totalElements / pageSize);
 
@@ -121,11 +129,9 @@ public class ProductServiceImpl implements ProductService {
         Page<Product> productsPage = productRepository.findAll(spec, pageable);
         List<Product> products = productsPage.getContent();
 
-        // if sortBy=sellingPrice
+        /* if sortBy=sellingPrice */
         if (sortBySellingPrice) {
-            Comparator<Product> comparator =
-                    Comparator.comparing(Product::getSellingPrice);
-
+            Comparator<Product> comparator = Comparator.comparing(Product::getSellingPrice);
             if ("desc".equalsIgnoreCase(sortingOrder)) {
                 comparator = comparator.reversed();
             }
@@ -135,12 +141,12 @@ public class ProductServiceImpl implements ProductService {
                     .toList();
         }
 
-        List<ProductDto> productDtoList = products.stream()
+        List<ProductResponseDTO> productResponseDTOList = products.stream()
                 .map(this::buildProductDto)
                 .toList();
 
         return ProductResponse.builder()
-                .content(productDtoList)
+                .content(productResponseDTOList)
                 .pageNumber(productsPage.getNumber())
                 .pageSize(productsPage.getSize())
                 .totalElements(productsPage.getTotalElements())
@@ -150,7 +156,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public ProductDto getProduct(Long productId) {
+    public ProductResponseDTO getProduct(Long productId) {
         if (productId == null) {
             throw new IllegalArgumentException("productId must not be null!");
         }
@@ -161,18 +167,20 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public ProductDto updateProduct(ProductDto productDto) {
+    public ProductResponseDTO updateProduct(Long productId, Long categoryId, ProductRequestDTO productRequestDTO) {
 
-        Product product = getProductByIdForUpdate(productDto.getProductId()); // throws
-        Category category = categoryService.getCategoryByName(productDto.getCategory()); // throws
+        Product product = getProductByIdForUpdate(productId); // throws
 
-        product.setProductName(productDto.getProductName());
-        product.setActive(productDto.isActive());
-        product.setDescription(productDto.getDescription());
-        product.setQuantity(productDto.getQuantity());
-        product.setRetailPrice(productDto.getRetailPrice());
-        product.setDiscountPercent(productDto.getDiscountPercent());
-        product.setCategory(category);
+        validateIfAlreadyExists(productRequestDTO.getProductName()); // throws
+        if (categoryId != null)
+            product.setCategory(categoryService.getCategoryById(categoryId)); // throws if category not found
+
+        product.setProductName(productRequestDTO.getProductName());
+        product.setActive(productRequestDTO.isActive());
+        product.setDescription(productRequestDTO.getDescription());
+        product.setQuantity(productRequestDTO.getQuantity());
+        product.setRetailPrice(productRequestDTO.getRetailPrice());
+        product.setDiscountPercent(productRequestDTO.getDiscountPercent());
 
         Product savedProduct = productRepository.save(product);
         return buildProductDto(savedProduct);
@@ -188,7 +196,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public ProductDto uploadProductImage(Long productId, MultipartFile image) throws IOException {
+    public ProductResponseDTO uploadProductImage(Long productId, MultipartFile image) throws IOException {
         if (image == null || image.isEmpty()) {
             throw new IllegalArgumentException("Image file must not be empty");
         }
@@ -217,15 +225,33 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public ProductDto updateProductInventory(Long productId, Integer newQuantity) {
-        if (newQuantity == null || newQuantity < 0) {
-            throw new IllegalArgumentException("Inventory cannot be negative");
-        }
+    public List<ProductSupplyUpdateResponseDTO> updateProductInventory(List<ProductSupplyUpdateRequestDTO> productSupplyUpdateRequestDTOs) {
+        List<ProductSupplyUpdateResponseDTO> productSupplyUpdateResponseDTOs = new ArrayList<>();
 
-        Product product = getProductByIdForUpdate(productId);
-        product.setQuantity(newQuantity);
-        Product savedProduct = productRepository.save(product);
-        return buildProductDto(savedProduct);
+        productSupplyUpdateRequestDTOs.forEach(productSupplyUpdateRequestDTO -> {
+            ProductSupplyUpdateResponseDTO productSupplyUpdateResponseDTO = ProductSupplyUpdateResponseDTO.builder()
+                    .productId(productSupplyUpdateRequestDTO.getProductId())
+                    .supplyType(productSupplyUpdateRequestDTO.getSupplyType())
+                    .quantity(productSupplyUpdateRequestDTO.getQuantity())
+                    .error(false)
+                    .build();
+            try {
+                Integer quantity = productSupplyUpdateRequestDTO.getQuantity();
+                Product product = getProductByIdForUpdate(productSupplyUpdateRequestDTO.getProductId());
+
+                if (SupplyType.ABSOLUTE.equals(productSupplyUpdateRequestDTO.getSupplyType())) {
+                    product.setInventoryAbsolute(quantity);
+                } else {
+                    product.adjustInventory(quantity);
+                }
+            } catch (Exception ex) {
+                productSupplyUpdateResponseDTO.setError(true);
+                productSupplyUpdateResponseDTO.setErrorMessage(ex.getMessage());
+            } finally {
+                productSupplyUpdateResponseDTOs.add(productSupplyUpdateResponseDTO);
+            }
+        });
+        return productSupplyUpdateResponseDTOs;
     }
 
     @Override
@@ -279,21 +305,22 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public EcommUser getSeller(Product product) {
-        return userDetailsService.getEcommUserByUsername("seller1");
+        return product.getUser();
     }
 
-    private ProductDto buildProductDto(Product product) {
-        return new ProductDto(
+    private ProductResponseDTO buildProductDto(Product product) {
+        return new ProductResponseDTO(
                 product.getProductId(),
                 product.getProductName(),
                 product.isActive(),
-                product.getCategory().getCategoryName(),
+                product.getCategory().getCategoryId(),
                 constructImageUrl(product.getImagePath()),
                 product.getDescription(),
                 product.getQuantity(),
                 product.getRetailPrice(),
                 product.getDiscountPercent(),
                 product.getSellingPrice(),
+                product.getUser().getUserId(),
                 product.getUpdateDate()
         );
     }
@@ -302,8 +329,7 @@ public class ProductServiceImpl implements ProductService {
         return imageBaseUrl.endsWith("/") ? imageBaseUrl + imagePath : imageBaseUrl + "/" + imagePath;
     }
 
-    private void validateIfAlreadyExists(ProductDto productDto) {
-        String productName = productDto.getProductName();
+    private void validateIfAlreadyExists(String productName) {
         if (productRepository.existsByProductName(productName)) {
             throw new ResourceAlreadyExistsException("Product", "productName", productName);
         }
