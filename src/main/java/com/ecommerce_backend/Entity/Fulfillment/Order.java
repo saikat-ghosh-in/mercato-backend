@@ -97,13 +97,10 @@ public class Order {
     private String currency; // INR
 
     @Column(nullable = false, precision = 15, scale = 2, updatable = false)
-    private BigDecimal subTotal;
+    private BigDecimal subtotal;
 
     @Column(nullable = false, precision = 15, scale = 2, updatable = false)
-    private BigDecimal taxAmount;
-
-    @Column(nullable = false, precision = 15, scale = 2, updatable = false)
-    private BigDecimal shippingFee;
+    private BigDecimal charges;
 
     @Column(nullable = false, precision = 15, scale = 2, updatable = false)
     private BigDecimal totalAmount;

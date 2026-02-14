@@ -20,7 +20,7 @@ public interface CartService {
 
     void deleteProductFromCart(Long productId);
 
-    void deleteCart();
+    void clearCart();
 
     List<CartResponseDTO> getAllCarts();
 

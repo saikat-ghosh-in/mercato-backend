@@ -83,7 +83,12 @@ public class Cart {
     @Transient
     public void removeProduct(Long productId) {
         findItemByProductId(productId)
-                .ifPresent(this::removeCartItem);
+                .ifPresentOrElse(
+                        this::removeCartItem,
+                        () -> {
+                            throw new IllegalStateException("Product not in cart");
+                        }
+                );
     }
 
     public void addCartItem(CartItem cartItem) {

@@ -23,8 +23,7 @@ public class OrderDto {
 
     private String currency;
     private BigDecimal subTotal;
-    private BigDecimal taxAmount;
-    private BigDecimal shippingFee;
+    private BigDecimal charges;
     private BigDecimal totalAmount;
 
     private Map<String, List<StateTransitionDto>> stateTransitions;

@@ -9,7 +9,6 @@ import java.time.Instant;
 @Data
 @AllArgsConstructor
 public class ProductResponseDTO {
-
     private final Long productId;
     private final String productName;
     private final boolean active;

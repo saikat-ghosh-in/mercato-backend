@@ -35,11 +35,14 @@ public class OrderServiceImpl implements OrderService {
 
         EcommUser currentUser = authUtil.getLoggedInUser();
         Cart cart = cartService.getCartByUser(currentUser);
+        if(cart == null || cart.getCartItems() == null || cart.getCartItems().isEmpty()) {
+            throw new CustomBadRequestException("Cart is empty");
+        }
 
         Order order = buildOrder(cart, orderRequestDto, currentUser);
 
         orderRepository.save(order);
-        cartService.deleteCart();
+        cartService.clearCart();
 
         return buildOrderDto(order);
     }
@@ -93,7 +96,6 @@ public class OrderServiceImpl implements OrderService {
         order.setCustomerName(customer.getUsername());
         order.setCustomerEmail(customer.getEmail());
         order.setOrderStatus(OrderStatus.CREATED);
-        order.setCurrency("INR");
 
         Address address = addressService.getAddressById(orderRequestDto.getAddressId());
         order.setRecipientName(address.getRecipientName());
@@ -126,8 +128,10 @@ public class OrderServiceImpl implements OrderService {
         }
 
         order.setCurrency("INR");
-        order.setTaxAmount(BigDecimal.ZERO); // will design cart to provide this
-        order.setShippingFee(BigDecimal.ZERO); // will design cart to provide this
+        order.setSubtotal(cart.getSubtotal());
+        order.setCharges(BigDecimal.ZERO); // will design cart to provide this
+        BigDecimal totalAmount = order.getSubtotal().add(order.getCharges());
+        order.setTotalAmount(totalAmount);
 
         paymentService.initiatePayment(order, PaymentMethod.getFromString(orderRequestDto.getPaymentMethod()));
 
@@ -168,9 +172,8 @@ public class OrderServiceImpl implements OrderService {
                 paymentService.buildPaymentDto(order.getPayment()),
                 orderLineDtoList,
                 order.getCurrency(),
-                order.getSubTotal(),
-                order.getTaxAmount(),
-                order.getShippingFee(),
+                order.getSubtotal(),
+                order.getCharges(),
                 order.getTotalAmount(),
                 null,
                 order.getCreateDate(),

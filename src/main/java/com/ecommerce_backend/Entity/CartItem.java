@@ -62,6 +62,7 @@ public class CartItem {
         if (qty <= 0) {
             throw new IllegalArgumentException("Quantity must be greater than 0");
         }
+        product.adjustInventory(-qty);
         this.quantity += qty;
     }
 
@@ -69,6 +70,7 @@ public class CartItem {
         if (qty <= 0) {
             throw new IllegalArgumentException("Quantity must be greater than 0");
         }
+        product.adjustInventory(this.quantity - qty);
         this.quantity = qty;
     }
 
@@ -79,6 +81,7 @@ public class CartItem {
         if (this.quantity < qty) {
             throw new IllegalStateException("Cannot reduce quantity below zero");
         }
+        product.adjustInventory(qty);
         this.quantity -= qty;
     }
 }

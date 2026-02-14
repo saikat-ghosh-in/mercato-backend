@@ -27,26 +27,25 @@ public class CartController {
     @GetMapping("/users/cart")
     public ResponseEntity<CartResponseDTO> getCart() {
         CartResponseDTO cartResponseDTO = cartService.getCart();
-        return new ResponseEntity<>(cartResponseDTO, HttpStatus.OK);
+        return new ResponseEntity<>(cartResponseDTO, cartResponseDTO == null ? HttpStatus.NO_CONTENT : HttpStatus.OK);
     }
 
     @PutMapping("/users/cart")
     public ResponseEntity<CartResponseDTO> updateProductQuantityInCart(@RequestBody CartItemRequestDTO cartItemRequestDTO) {
-
         CartResponseDTO cartResponseDTO = cartService.updateProductQuantityInCart(cartItemRequestDTO);
         return new ResponseEntity<>(cartResponseDTO, HttpStatus.OK);
     }
 
-    @DeleteMapping("users/cart/remove/{productId}")
+    @DeleteMapping("/users/cart/remove/{productId}")
     public ResponseEntity<String> deleteProductFromCart(@PathVariable Long productId) {
         cartService.deleteProductFromCart(productId);
         return new ResponseEntity<>("Product removed from the cart.", HttpStatus.OK);
     }
 
     @DeleteMapping("/users/cart")
-    public ResponseEntity<String> deleteCart() {
-        cartService.deleteCart();
-        return new ResponseEntity<>("Cart has been deleted.", HttpStatus.OK);
+    public ResponseEntity<String> clearCart() {
+        cartService.clearCart();
+        return new ResponseEntity<>("Cart has been cleared.", HttpStatus.OK);
     }
 
     @GetMapping("/admin/carts")

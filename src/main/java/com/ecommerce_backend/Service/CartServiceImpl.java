@@ -4,6 +4,7 @@ import com.ecommerce_backend.Entity.Cart;
 import com.ecommerce_backend.Entity.CartItem;
 import com.ecommerce_backend.Entity.EcommUser;
 import com.ecommerce_backend.Entity.Product;
+import com.ecommerce_backend.ExceptionHandler.CustomBadRequestException;
 import com.ecommerce_backend.ExceptionHandler.ResourceNotFoundException;
 import com.ecommerce_backend.Payloads.Request.CartItemRequestDTO;
 import com.ecommerce_backend.Payloads.Request.CartRequestDTO;
@@ -34,7 +35,7 @@ public class CartServiceImpl implements CartService {
 
         Cart cart = getOrCreateCart();
 
-        cartRequestDTO.getCartItemRequestDTOs().forEach(dto -> {
+        cartRequestDTO.getCartItems().forEach(dto -> {
 
             Long productId = dto.getProductId();
             Integer requestedQuantity = dto.getQuantity();
@@ -60,8 +61,7 @@ public class CartServiceImpl implements CartService {
 
     @Override
     public Cart getCartByUser(EcommUser user) {
-        return cartRepository.findByUser_UserId(user.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("Cart", "user", user.getUsername()));
+        return cartRepository.findByUser_UserId(user.getUserId()).orElse(null);
     }
 
     @Override
@@ -69,13 +69,16 @@ public class CartServiceImpl implements CartService {
     public CartResponseDTO updateProductQuantityInCart(CartItemRequestDTO cartItemRequestDTO) {
         Long productId = cartItemRequestDTO.getProductId();
         Integer newQuantity = cartItemRequestDTO.getQuantity();
-
-        Product product = productService.getProductByIdForUpdate(productId);
-        product.adjustInventory(-newQuantity);
+        if (newQuantity == null || newQuantity < 0) {
+            throw new IllegalArgumentException("Quantity cannot be less than 0");
+        }
 
         Cart cart = getCurrentUserCart();
-        cart.updateProductQuantity(productId, newQuantity);
+        if (cart == null) {
+            throw new CustomBadRequestException("Cart is empty");
+        }
 
+        cart.updateProductQuantity(productId, newQuantity);
         return buildCartResponseDTO(cart);
     }
 
@@ -83,6 +86,10 @@ public class CartServiceImpl implements CartService {
     @Transactional
     public void deleteProductFromCart(Long productId) {
         Cart cart = getCurrentUserCart();
+        if (cart == null) {
+            throw new CustomBadRequestException("Cart is empty");
+        }
+
         Optional<CartItem> existingCartItem = cart.findItemByProductId(productId);
         if (existingCartItem.isEmpty()) {
             throw new ResourceNotFoundException("CartItem", "productId", productId);
@@ -98,16 +105,20 @@ public class CartServiceImpl implements CartService {
 
     @Override
     @Transactional
-    public void deleteCart() {
+    public void clearCart() {
         Cart cart = getCurrentUserCart();
+        if (cart == null) {
+            throw new CustomBadRequestException("Cart does not exist");
+        }
+
         cart.getCartItems().stream()
                 .sorted(Comparator.comparing(cartItem -> cartItem.getProduct().getProductId()))
                 .forEach(cartItem -> {
                     Long productId = cartItem.getProduct().getProductId();
                     Product product = productService.getProductByIdForUpdate(productId);
                     product.adjustInventory(cartItem.getQuantity());
+                    cart.removeCartItem(cartItem);
                 });
-        cartRepository.delete(cart);
     }
 
     @Override
@@ -147,14 +158,13 @@ public class CartServiceImpl implements CartService {
     }
 
     private CartResponseDTO buildCartResponseDTO(Cart cart) {
+        if (cart == null) return null;
 
         List<CartItemResponseDTO> cartItemResponseDTOList = cart.getCartItems().stream()
                 .map(cartItem -> new CartItemResponseDTO(
                         cartItem.getCartItemId(),
                         cart.getCartId(),
                         cartItem.getProduct().getProductId(),
-                        cartItem.getProduct().getProductName(),
-                        cartItem.getProduct().getImagePath(),
                         cartItem.getQuantity(),
                         cartItem.getItemPrice(),
                         cartItem.getLineTotal()

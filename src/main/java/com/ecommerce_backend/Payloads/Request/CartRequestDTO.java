@@ -8,5 +8,5 @@ import java.util.List;
 @Getter
 @AllArgsConstructor
 public class CartRequestDTO {
-    private final List<CartItemRequestDTO> cartItemRequestDTOs;
+    private final List<CartItemRequestDTO> cartItems;
 }
