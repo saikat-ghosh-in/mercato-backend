@@ -1,7 +1,6 @@
 package com.ecommerce_backend.Entity.Fulfillment;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -9,9 +8,12 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Entity
@@ -39,21 +41,19 @@ public class Order {
             name = "order_seq",
             sequenceName = "order_seq",
             initialValue = 80000001,
-            allocationSize = 10
+            allocationSize = 1
     )
     @EqualsAndHashCode.Include
     private Long orderId;
 
-    @NotNull
-    @Size(min = 21, max = 21)
+    @Size(max = 30)
     @Column(
             name = "order_number",
             nullable = false,
             unique = true,
-            updatable = false,
-            length = 21
+            length = 30
     )
-    private String orderNumber; // format: ORD-ddMMyyyy-<cartId>
+    private String orderNumber;
 
     @Column(name = "customer_name", nullable = false, updatable = false)
     private String customerName;
@@ -129,6 +129,16 @@ public class Order {
     @Column(name = "update_date")
     private Instant updateDate;
 
+
+    @PrePersist
+    public void generateOrderNumber() {
+        if (this.orderNumber == null) {
+            String datePart = LocalDate.now()
+                    .format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+
+            this.orderNumber = String.format("ORD-%s-%s", datePart, UUID.randomUUID().toString().substring(0, 6));
+        }
+    }
 
     public void attachPayment(Payment payment) {
         if (this.orderStatus != OrderStatus.CREATED) {

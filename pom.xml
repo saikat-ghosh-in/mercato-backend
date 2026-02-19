@@ -64,9 +64,9 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
-            <groupId>org.modelmapper</groupId>
-            <artifactId>modelmapper</artifactId>
-            <version>3.2.4</version>
+            <groupId>com.stripe</groupId>
+            <artifactId>stripe-java</artifactId>
+            <version>24.16.0</version>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>

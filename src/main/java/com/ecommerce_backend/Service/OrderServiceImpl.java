@@ -14,8 +14,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
@@ -25,7 +23,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final CartService cartService;
     private final ProductService productService;
-    private final PaymentService paymentService;
+    private final StripeService stripeService;
     private final AddressService addressService;
     private final AuthUtil authUtil;
 
@@ -86,13 +84,9 @@ public class OrderServiceImpl implements OrderService {
     private Order buildOrder(Cart cart, OrderRequestDto orderRequestDto, EcommUser customer) {
 
         List<CartItem> cartItems = cart.getCartItems();
-        if (cartItems.isEmpty()) {
-            throw new CustomBadRequestException("Cart is empty");
-        }
 
         Order order = new Order();
 
-        order.setOrderNumber(generateOrderNumber(cart.getCartId()));
         order.setCustomerName(customer.getUsername());
         order.setCustomerEmail(customer.getEmail());
         order.setOrderStatus(OrderStatus.CREATED);
@@ -133,17 +127,9 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal totalAmount = order.getSubtotal().add(order.getCharges());
         order.setTotalAmount(totalAmount);
 
-        paymentService.initiatePayment(order, PaymentMethod.getFromString(orderRequestDto.getPaymentMethod()));
+        stripeService.initiatePayment(order, PaymentMethod.getFromString(orderRequestDto.getPaymentMethod()));
 
         return order;
-    }
-
-    private String generateOrderNumber(Long cartId) {
-        String prefix = "ORD";
-        String datePart = LocalDate.now()
-                .format(DateTimeFormatter.ofPattern("ddMMyyyy"));
-
-        return String.format("%s-%s-%06d", prefix, datePart, cartId);
     }
 
     private OrderDto buildOrderDto(Order order) {
@@ -169,7 +155,7 @@ public class OrderServiceImpl implements OrderService {
                         order.getDeliveryState(),
                         order.getDeliveryPincode()
                 ),
-                paymentService.buildPaymentDto(order.getPayment()),
+                stripeService.buildPaymentDto(order.getPayment()),
                 orderLineDtoList,
                 order.getCurrency(),
                 order.getSubtotal(),
