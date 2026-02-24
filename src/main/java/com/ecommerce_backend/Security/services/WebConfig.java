@@ -8,7 +8,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import java.util.Arrays;
+
 import java.util.List;
 
 @Configuration
@@ -16,25 +16,24 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Value("${frontend.base.url}")
     String frontendBaseUrl;
-    @Value("${pgSql.base.url}")
-    String pgSqlBaseUrl;
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOriginPatterns(pgSqlBaseUrl, frontendBaseUrl)
+                .allowedOriginPatterns(frontendBaseUrl)
                 .allowedMethods("GET","POST","PUT","DELETE","OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true);
     }
 
-    @Bean
+    @Bean("customCorsConfig")
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(Arrays.asList(pgSqlBaseUrl, frontendBaseUrl));
-        config.setAllowedMethods(Arrays.asList("GET","POST","PUT","DELETE","OPTIONS"));
+        config.setAllowedOrigins(List.of(frontendBaseUrl));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;

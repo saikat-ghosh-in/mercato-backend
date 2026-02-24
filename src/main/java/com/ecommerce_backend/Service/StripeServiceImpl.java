@@ -49,7 +49,7 @@ public class StripeServiceImpl implements StripeService {
     @Override
     public PaymentIntent createStripePaymentIntent(StripePaymentRequestDTO stripePaymentRequestDTO) throws StripeException {
         EcommUser user = authUtil.getLoggedInUser();
-        Customer customer = new Customer();
+        Customer customer;
         try {
             customer = retrieveStripeCustomerFromEmail(user.getEmail());
         } catch (StripeException e) {

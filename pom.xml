@@ -9,8 +9,8 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example</groupId>
-    <artifactId>ecommerce-backend</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <artifactId>mercato-backend</artifactId>
+    <version>v0.0.1-SNAPSHOT</version>
     <name>ecommerce-backend</name>
     <description>project for ecommerce-backend using Java spring boot</description>
     <url/>

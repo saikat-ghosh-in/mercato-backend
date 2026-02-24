@@ -28,7 +28,16 @@ import java.time.Instant;
 public class OrderLine {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(
+            strategy = GenerationType.SEQUENCE,
+            generator = "order_line_seq"
+    )
+    @SequenceGenerator(
+            name = "order_line_seq",
+            sequenceName = "order_line_seq",
+            initialValue = 90000001,
+            allocationSize = 1
+    )
     @EqualsAndHashCode.Include
     private Long orderLineId;
 

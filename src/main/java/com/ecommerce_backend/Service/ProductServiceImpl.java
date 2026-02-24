@@ -46,8 +46,8 @@ public class ProductServiceImpl implements ProductService {
     @Value("${images.products.folder}")
     private String productsImageFolder;
 
-    @Value("${images.products.placeholder}")
-    private String placeholderImageName;
+    @Value("${images.products.placeholder.url}")
+    private String placeholderImageUrl;
 
     private final ProductRepository productRepository;
     private final CategoryService categoryService;
@@ -68,7 +68,7 @@ public class ProductServiceImpl implements ProductService {
         Product product = new Product();
         product.setProductName(productRequestDTO.getProductName());
         product.setActive(productRequestDTO.isActive());
-        product.setImagePath(AppConstants.PRODUCT_IMAGE_PATH_PREFIX + placeholderImageName);
+        product.setImagePath(placeholderImageUrl);
         product.setDescription(productRequestDTO.getDescription());
         product.setQuantity(productRequestDTO.getQuantity());
         product.setRetailPrice(productRequestDTO.getRetailPrice());
@@ -289,7 +289,7 @@ public class ProductServiceImpl implements ProductService {
             p.setProductName("Dummy Product " + i);
             p.setActive(true);
             p.setDescription("This is a dummy description for product " + i);
-            p.setImagePath(AppConstants.PRODUCT_IMAGE_PATH_PREFIX + placeholderImageName);
+            p.setImagePath(placeholderImageUrl);
             p.setQuantity(10 + i);
             p.setRetailPrice(new BigDecimal(500 + (i * 25)));
             p.setDiscountPercent(new BigDecimal(i % 20)); // 0–19%
@@ -326,6 +326,9 @@ public class ProductServiceImpl implements ProductService {
     }
 
     private String constructImageUrl(String imagePath) {
+        if(imagePath == null || imagePath.isEmpty() || imagePath.equals(placeholderImageUrl)) {
+            return placeholderImageUrl;
+        }
         return imageBaseUrl.endsWith("/") ? imageBaseUrl + imagePath : imageBaseUrl + "/" + imagePath;
     }
 
