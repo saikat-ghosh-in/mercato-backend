@@ -5,7 +5,6 @@ import com.ecommerce_backend.Entity.Category;
 import com.ecommerce_backend.Entity.EcommUser;
 import com.ecommerce_backend.Entity.Product;
 import com.ecommerce_backend.Entity.SupplyType;
-import com.ecommerce_backend.ExceptionHandler.InsufficientInventoryException;
 import com.ecommerce_backend.ExceptionHandler.ResourceAlreadyExistsException;
 import com.ecommerce_backend.ExceptionHandler.ResourceNotFoundException;
 import com.ecommerce_backend.Payloads.Request.ProductRequestDTO;
@@ -15,7 +14,6 @@ import com.ecommerce_backend.Payloads.Response.ProductResponse;
 import com.ecommerce_backend.Payloads.Response.ProductSupplyUpdateResponseDTO;
 import com.ecommerce_backend.Repository.CategoryRepository;
 import com.ecommerce_backend.Repository.ProductRepository;
-import com.ecommerce_backend.Security.services.UserDetailsServiceImpl;
 import com.ecommerce_backend.Utils.AuthUtil;
 import com.ecommerce_backend.Utils.FileService;
 import lombok.RequiredArgsConstructor;
@@ -52,7 +50,6 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final CategoryService categoryService;
     private final CategoryRepository categoryRepository;
-    private final UserDetailsServiceImpl userDetailsService;
     private final FileService fileService;
     private final AuthUtil authUtil;
 
@@ -256,24 +253,8 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public void sourceProduct(Long productId, Integer requestedQuantity) {
-        if (requestedQuantity == null || requestedQuantity < 0) {
-            throw new IllegalArgumentException("Inventory cannot be negative");
-        }
-
-        Product product = getProductByIdForUpdate(productId);
-        if (product.getQuantity() < requestedQuantity) {
-            throw new InsufficientInventoryException(product.getProductName(), product.getQuantity());
-        }
-
-        product.setQuantity(product.getQuantity() - requestedQuantity);
-        productRepository.save(product);
-    }
-
-    @Override
-    @Transactional
     public String addDummyProducts() {
-        EcommUser seller = userDetailsService.getEcommUserByUsername("seller1"); // throws
+        EcommUser seller = authUtil.getLoggedInUser();
 
         List<Category> categories = categoryRepository.findAll();
         if (categories.isEmpty()) {
@@ -282,13 +263,13 @@ public class ProductServiceImpl implements ProductService {
 
         List<Product> products = new ArrayList<>();
 
-        for (int i = 1; i <= 40; i++) {
+        for (int i = 1; i <= 30; i++) {
             Category category = categories.get(i % categories.size());
 
             Product p = new Product();
             p.setProductName("Dummy Product " + i);
             p.setActive(true);
-            p.setDescription("This is a dummy description for product " + i);
+            p.setDescription("Dummy description for product " + i);
             p.setImagePath(placeholderImageUrl);
             p.setQuantity(10 + i);
             p.setRetailPrice(new BigDecimal(500 + (i * 25)));

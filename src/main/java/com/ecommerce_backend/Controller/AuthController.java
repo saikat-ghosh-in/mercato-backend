@@ -52,17 +52,12 @@ public class AuthController {
 
     @GetMapping("/user")
     public ResponseEntity<?> getCurrentUserFromAuthentication() {
-        UserInfoResponse username = authService.getCurrentUserFromAuthentication();
-        return ResponseEntity.ok(username);
+        UserInfoResponse user = authService.getCurrentUserFromAuthentication();
+        return ResponseEntity.ok(user);
     }
 
     @PostMapping("/signout")
     public ResponseEntity<?> signOutCurrentUser() {
         return authService.signOutCurrentUser();
-    }
-
-    @GetMapping("/addDummyUsers")
-    public String addDummyUsers() {
-        return authService.addDummyUsers();
     }
 }

@@ -49,7 +49,7 @@ public class CategoryController {
         return new ResponseEntity<>("Category deleted successfully", HttpStatus.OK);
     }
 
-    @GetMapping("/addDummyCategories")
+    @GetMapping("/admin/addDummyCategories")
     public ResponseEntity<String> addDummyCategories() {
         return new ResponseEntity<>(categoryService.addDummyCategories(), HttpStatus.CREATED);
     }

@@ -30,8 +30,6 @@ public interface ProductService {
 
     List<ProductSupplyUpdateResponseDTO> updateProductInventory(List<ProductSupplyUpdateRequestDTO> productSupplyUpdateRequestDTOs);
 
-    void sourceProduct(Long productId, Integer requestedQuantity);
-
     String addDummyProducts();
 
     EcommUser getSeller(Product product);

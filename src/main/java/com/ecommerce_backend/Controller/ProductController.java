@@ -74,7 +74,7 @@ public class ProductController {
         return new ResponseEntity<>(productSupplyUpdateResponseDTOs, HttpStatus.OK);
     }
 
-    @GetMapping("/addDummyProducts")
+    @GetMapping("/admin/addDummyProducts")
     public ResponseEntity<String> addDummyProducts() {
         return new ResponseEntity<>(productService.addDummyProducts(), HttpStatus.CREATED);
     }

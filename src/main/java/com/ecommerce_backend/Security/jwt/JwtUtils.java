@@ -50,14 +50,18 @@ public class JwtUtils {
         return ResponseCookie.from(jwtCookie, jwt)
                 .path("/api")
                 .maxAge(24 * 60 * 60)
-                .httpOnly(false)
-                .secure(false) // set to true when in prod
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
                 .build();
     }
 
     public ResponseCookie getCleanJwtCookie() {
         return ResponseCookie.from(jwtCookie, null)
                 .path("/api")
+                .maxAge(0)
+                .secure(true)
+                .sameSite("None")
                 .build();
     }
 
