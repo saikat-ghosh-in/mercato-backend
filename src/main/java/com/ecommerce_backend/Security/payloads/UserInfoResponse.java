@@ -16,6 +16,7 @@ public class UserInfoResponse {
     private String username;
     private String email;
     private String token;
+    private Long tokenExpirationTime;
     private List<String> roles;
 }
 

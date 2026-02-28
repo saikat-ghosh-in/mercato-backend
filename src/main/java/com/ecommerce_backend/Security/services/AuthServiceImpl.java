@@ -50,6 +50,7 @@ public class AuthServiceImpl implements AuthService {
         SecurityContextHolder.getContext().setAuthentication(authentication);
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         ResponseCookie jwtCookie = jwtUtils.generateJwtCookie(userDetails);
+        String jwt = jwtCookie.getValue();
 
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -58,12 +59,13 @@ public class AuthServiceImpl implements AuthService {
                 .userId(userDetails.getUserId())
                 .username(userDetails.getUsername())
                 .email(userDetails.getEmail())
-                .token(jwtCookie.getValue())
+                .token(jwt)
+                .tokenExpirationTime(jwtUtils.getTokenExpirationTime(jwt))
                 .roles(roles)
                 .build();
 
-        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE,
-                        jwtCookie.toString())
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
                 .body(response);
     }
 
