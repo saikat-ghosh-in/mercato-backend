@@ -8,13 +8,14 @@ import com.ecommerce_backend.ExceptionHandler.CustomBadRequestException;
 import com.ecommerce_backend.ExceptionHandler.ResourceNotFoundException;
 import com.ecommerce_backend.Payloads.Request.CartItemRequestDTO;
 import com.ecommerce_backend.Payloads.Request.CartRequestDTO;
+import com.ecommerce_backend.Payloads.Response.CartChargeResponseDTO;
 import com.ecommerce_backend.Payloads.Response.CartResponseDTO;
 import com.ecommerce_backend.Payloads.Response.CartItemResponseDTO;
 import com.ecommerce_backend.Repository.CartRepository;
 import com.ecommerce_backend.Utils.AuthUtil;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.List;
@@ -28,6 +29,7 @@ public class CartServiceImpl implements CartService {
     private final CartRepository cartRepository;
     private final AuthUtil authUtil;
     private final ProductService productService;
+    private final CartPricingService cartPricingService;
 
     @Override
     @Transactional
@@ -37,7 +39,7 @@ public class CartServiceImpl implements CartService {
 
         cartRequestDTO.getCartItems().forEach(dto -> {
 
-            Long productId = dto.getProductId();
+            String productId = dto.getProductId();
             Integer requestedQuantity = dto.getQuantity();
 
             if (requestedQuantity == null || requestedQuantity <= 0) {
@@ -50,24 +52,33 @@ public class CartServiceImpl implements CartService {
             cart.addProduct(product, requestedQuantity);
         });
 
+        cartPricingService.applyCharges(cart);
         cartRepository.save(cart);
         return buildCartResponseDTO(cart);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public CartResponseDTO getCart() {
-        return buildCartResponseDTO(getCurrentUserCart());
+        Cart cart = getCurrentUserCart();
+        cartPricingService.applyCharges(cart);
+        return buildCartResponseDTO(cart);
     }
 
     @Override
     public Cart getCartByUser(EcommUser user) {
-        return cartRepository.findByUser_UserId(user.getUserId()).orElse(null);
+        Cart cart = cartRepository.findCartWithItemsByUserId(user.getUserId())
+                .orElse(null);
+        if (cart == null) return null;
+
+        cartPricingService.applyCharges(cart);
+        return cart;
     }
 
     @Override
     @Transactional
     public CartResponseDTO updateProductQuantityInCart(CartItemRequestDTO cartItemRequestDTO) {
-        Long productId = cartItemRequestDTO.getProductId();
+        String productId = cartItemRequestDTO.getProductId();
         Integer newQuantity = cartItemRequestDTO.getQuantity();
         if (newQuantity == null || newQuantity < 0) {
             throw new IllegalArgumentException("Quantity cannot be less than 0");
@@ -79,12 +90,15 @@ public class CartServiceImpl implements CartService {
         }
 
         cart.updateProductQuantity(productId, newQuantity);
+        cartPricingService.applyCharges(cart);
+
+        cartRepository.save(cart);
         return buildCartResponseDTO(cart);
     }
 
     @Override
     @Transactional
-    public void deleteProductFromCart(Long productId) {
+    public void deleteProductFromCart(String productId) {
         Cart cart = getCurrentUserCart();
         if (cart == null) {
             throw new CustomBadRequestException("Cart is empty");
@@ -101,6 +115,9 @@ public class CartServiceImpl implements CartService {
         product.adjustInventory(quantityToRestore);
 
         cart.removeCartItem(cartItem);
+        cartPricingService.applyCharges(cart);
+
+        cartRepository.save(cart);
     }
 
     @Override
@@ -111,17 +128,27 @@ public class CartServiceImpl implements CartService {
             throw new CustomBadRequestException("Cart does not exist");
         }
 
-        cart.getCartItems().stream()
-                .sorted(Comparator.comparing(cartItem -> cartItem.getProduct().getProductId()))
-                .forEach(cartItem -> {
-                    Long productId = cartItem.getProduct().getProductId();
-                    Product product = productService.getProductByIdForUpdate(productId);
-                    product.adjustInventory(cartItem.getQuantity());
-                    cart.removeCartItem(cartItem);
-                });
+        if (cart.isEmpty()) {
+            return;
+        }
+
+        List<CartItem> itemsToRestore = cart.getCartItems().stream()
+                .sorted(Comparator.comparingLong(item -> item.getProduct().getId()))
+                .toList();
+
+        itemsToRestore.forEach(item -> {
+            Product product = productService.getProductByIdForUpdate(item.getProduct().getProductId());
+            product.adjustInventory(item.getQuantity());
+        });
+
+        cart.clear();
+        cartPricingService.applyCharges(cart);
+
+        cartRepository.save(cart);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<CartResponseDTO> getAllCarts() {
         return cartRepository.findAll()
                 .stream()
@@ -130,11 +157,12 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    public CartResponseDTO getCartById(Long cartId) {
+    @Transactional(readOnly = true)
+    public CartResponseDTO getCartById(String cartId) {
         if (cartId == null) {
             throw new IllegalArgumentException("cartId must not be null!");
         }
-        Cart cart = cartRepository.findById(cartId)
+        Cart cart = cartRepository.findByCartId(cartId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cart", "cartId", cartId));
         return buildCartResponseDTO(cart);
     }
@@ -143,7 +171,7 @@ public class CartServiceImpl implements CartService {
     @Transactional
     private Cart getOrCreateCart() {
         EcommUser currentUser = authUtil.getLoggedInUser();
-        Optional<Cart> existingCart = cartRepository.findByUser_UserId(currentUser.getUserId());
+        Optional<Cart> existingCart = cartRepository.findByUser_Id(currentUser.getId());
         if (existingCart.isPresent()) {
             return existingCart.get();
         }
@@ -162,8 +190,6 @@ public class CartServiceImpl implements CartService {
 
         List<CartItemResponseDTO> cartItemResponseDTOList = cart.getCartItems().stream()
                 .map(cartItem -> new CartItemResponseDTO(
-                        cartItem.getCartItemId(),
-                        cart.getCartId(),
                         cartItem.getProduct().getProductId(),
                         cartItem.getQuantity(),
                         cartItem.getItemPrice(),
@@ -173,6 +199,14 @@ public class CartServiceImpl implements CartService {
         return new CartResponseDTO(
                 cart.getCartId(),
                 cart.getSubtotal(),
+                cart.getCharges().stream()
+                        .map(charge -> new CartChargeResponseDTO(
+                                charge.getType(),
+                                charge.getAmount(),
+                                charge.getDescription()
+                        )).toList(),
+                cart.getTotalCharges(),
+                cart.getTotal(),
                 cartItemResponseDTOList
         );
     }

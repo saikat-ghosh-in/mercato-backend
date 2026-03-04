@@ -7,10 +7,9 @@ import java.time.Instant;
 
 @Data
 @AllArgsConstructor
-public class CategoryDto {
-
-    private Long categoryId;
+public class CategoryResponseDTO {
+    private String categoryId;
     private String categoryName;
-    private String updateUser;
-    private Instant updateDate;
+    private Instant createdAt;
+    private Instant updatedAt;
 }

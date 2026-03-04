@@ -9,7 +9,6 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -19,8 +18,12 @@ import java.util.stream.Collectors;
 @Entity
 @Table(
         name = "ecomm_order_snapshot",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_order_order_id", columnNames = "order_id"),
+                @UniqueConstraint(name = "uk_order_payment_fk", columnNames = "payment_fk")
+        },
         indexes = {
-                @Index(name = "idx_order_number", columnList = "order_number"),
+                @Index(name = "idx_order_id", columnList = "order_id"),
                 @Index(name = "idx_order_status", columnList = "order_status"),
                 @Index(name = "idx_order_customer_email", columnList = "customer_email")
         }
@@ -44,16 +47,11 @@ public class Order {
             allocationSize = 1
     )
     @EqualsAndHashCode.Include
-    private Long orderId;
+    private Long id;
 
     @Size(max = 30)
-    @Column(
-            name = "order_number",
-            nullable = false,
-            unique = true,
-            length = 30
-    )
-    private String orderNumber;
+    @Column(name = "order_id", nullable = false, updatable = false, length = 30)
+    private String orderId;
 
     @Column(name = "customer_name", nullable = false, updatable = false)
     private String customerName;
@@ -86,11 +84,7 @@ public class Order {
     @Column(nullable = false, updatable = false)
     private String deliveryPincode;
 
-    @OneToMany(
-            mappedBy = "order",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderLine> orderLines = new ArrayList<>();
 
     @Column(length = 3, nullable = false, updatable = false)
@@ -105,38 +99,34 @@ public class Order {
     @Column(nullable = false, precision = 15, scale = 2, updatable = false)
     private BigDecimal totalAmount;
 
-    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinColumn(name = "payment_id")
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "payment_fk", referencedColumnName = "id")
     private Payment payment;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_status", nullable = false)
     private PaymentStatus paymentStatus;
 
-    @OneToMany(
-            mappedBy = "order",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("occurredAt DESC")
     private List<StateTransition> stateTransitions = new ArrayList<>();
 
     @CreationTimestamp
-    @Column(name = "create_date", updatable = false)
-    private Instant createDate;
+    @Column(name = "created_at", updatable = false)
+    private Instant createdAt;
 
     @UpdateTimestamp
-    @Column(name = "update_date")
-    private Instant updateDate;
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 
 
     @PrePersist
-    public void generateOrderNumber() {
-        if (this.orderNumber == null) {
-            String datePart = LocalDate.now()
-                    .format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-
-            this.orderNumber = String.format("ORD-%s-%s", datePart, UUID.randomUUID().toString().substring(0, 6));
+    private void prePersist() {
+        if (this.orderId == null) {
+            String datePart = LocalDate.now().toString().replace("-", "");
+            String randomPart = UUID.randomUUID().toString().replace("-", "")
+                    .substring(0, 12).toUpperCase();
+            this.orderId = "ORD-" + datePart + "-" + randomPart;
         }
     }
 

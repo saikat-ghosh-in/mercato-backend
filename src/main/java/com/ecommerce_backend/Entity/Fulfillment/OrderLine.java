@@ -14,10 +14,12 @@ import java.time.Instant;
 @Table(
         name = "order_lines_snapshot",
         uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uk_order_line_number",
-                        columnNames = {"order_id", "order_line_number"}
-                )
+                @UniqueConstraint(name = "uk_order_line_order_line_number", columnNames = {"order_fk", "order_line_number"})
+        },
+        indexes = {
+                @Index(name = "idx_order_line_order_fk", columnList = "order_fk"),
+                @Index(name = "idx_order_line_product_id", columnList = "product_id"),
+                @Index(name = "idx_order_line_status", columnList = "order_line_status")
         }
 )
 @Getter
@@ -39,46 +41,48 @@ public class OrderLine {
             allocationSize = 1
     )
     @EqualsAndHashCode.Include
-    private Long orderLineId;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", nullable = false)
-    private Order order;
+    private Long id;
 
     @NotNull
     @Min(1)
     @Column(name = "order_line_number", nullable = false, updatable = false)
     private Integer orderLineNumber;
 
-    @Column(name = "product_id", nullable = false, updatable = false)
-    private Long productId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_fk", referencedColumnName = "id", nullable = false)
+    private Order order;
 
-    @Column(name = "product_name", nullable = false, updatable = false)
+    @Column(name = "product_id", nullable = false, updatable = false)
+    private String productId;
+
+    @Column(nullable = false, updatable = false)
     private String productName;
 
     @Column(nullable = false, precision = 15, scale = 2, updatable = false)
     private BigDecimal unitPrice;
 
     @Column(nullable = false, updatable = false)
+    @Min(1)
     private Integer quantity;
 
     @Column(nullable = false, precision = 15, scale = 2, updatable = false)
     private BigDecimal lineTotal;
 
-    @Column(updatable = false)
+    @Column(updatable = false, length = 100)
     private String sellerName;
 
-    @Column(updatable = false)
+    @Column(updatable = false, length = 100)
     private String sellerEmail;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 30)
     private OrderLineStatus orderLineStatus;
 
     @CreationTimestamp
-    @Column(updatable = false)
-    private Instant createDate;
+    @Column(name = "created_at", updatable = false)
+    private Instant createdAt;
 
     @UpdateTimestamp
-    private Instant updateDate;
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 }

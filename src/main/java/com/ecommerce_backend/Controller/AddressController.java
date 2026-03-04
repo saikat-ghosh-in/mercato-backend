@@ -30,7 +30,7 @@ public class AddressController {
     }
 
     @GetMapping("/admin/addresses/{addressId}")
-    public ResponseEntity<AddressResponseDTO> getAddress(@PathVariable Long addressId) {
+    public ResponseEntity<AddressResponseDTO> getAddress(@PathVariable String addressId) {
         AddressResponseDTO addressResponseDTO = addressService.getAddress(addressId);
         return new ResponseEntity<>(addressResponseDTO, HttpStatus.OK);
     }
@@ -42,14 +42,14 @@ public class AddressController {
     }
 
     @PutMapping("/users/addresses/{addressId}")
-    public ResponseEntity<AddressResponseDTO> updateAddress(@PathVariable Long addressId,
+    public ResponseEntity<AddressResponseDTO> updateAddress(@PathVariable String addressId,
                                                             @RequestBody AddressRequestDTO addressRequestDTO) {
         AddressResponseDTO updatedAddressResponseDTO = addressService.updateAddress(addressId, addressRequestDTO);
         return new ResponseEntity<>(updatedAddressResponseDTO, HttpStatus.OK);
     }
 
     @DeleteMapping("/users/addresses/{addressId}")
-    public ResponseEntity<String> deleteAddress(@PathVariable Long addressId) {
+    public ResponseEntity<String> deleteAddress(@PathVariable String addressId) {
         addressService.deleteAddress(addressId);
         return new ResponseEntity<>("Address deleted successfully", HttpStatus.OK);
     }

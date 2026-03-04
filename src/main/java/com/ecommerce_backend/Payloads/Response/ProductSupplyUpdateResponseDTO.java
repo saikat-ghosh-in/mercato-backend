@@ -8,7 +8,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductSupplyUpdateResponseDTO {
-    private Long productId;
+    private String productId;
     private SupplyType supplyType;
     private Integer quantity;
     private boolean error;

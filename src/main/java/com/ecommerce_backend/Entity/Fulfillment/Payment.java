@@ -5,11 +5,16 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.UUID;
+
 @Entity
 @Table(
         name = "payments",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_payment_payment_id", columnNames = "payment_id")
+        },
         indexes = {
-                @Index(name = "idx_payment_order", columnList = "order_id"),
                 @Index(name = "idx_payment_status", columnList = "status"),
                 @Index(name = "idx_payment_gateway_ref", columnList = "gateway_reference")
         }
@@ -33,10 +38,12 @@ public class Payment {
             allocationSize = 10
     )
     @EqualsAndHashCode.Include
-    private Long paymentId;
+    private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", nullable = false, updatable = false)
+    @Column(name = "payment_id", nullable = false, updatable = false, length = 30)
+    private String paymentId;
+
+    @OneToOne(mappedBy = "payment", optional = false)
     private Order order;
 
     @Column(nullable = false, precision = 15, scale = 2)
@@ -64,4 +71,14 @@ public class Payment {
 
     private Instant initiatedAt;
     private Instant completedAt;
+
+    @PrePersist
+    private void prePersist() {
+        if (this.paymentId == null) {
+            String datePart = LocalDate.now().toString().replace("-", "");
+            String randomPart = UUID.randomUUID().toString().replace("-", "")
+                    .substring(0, 6).toUpperCase();
+            this.paymentId = "PMT-" + datePart + "-" + randomPart;
+        }
+    }
 }

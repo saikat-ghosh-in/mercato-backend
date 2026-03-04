@@ -1,37 +1,45 @@
 package com.ecommerce_backend.Entity;
 
+import com.ecommerce_backend.Service.CartPricingService;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Entity
-@Table(name = "ecomm_carts")
+@Table(
+        name = "ecomm_carts",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_cart_cart_id", columnNames = "cart_id"),
+                @UniqueConstraint(name = "uk_cart_user_fk", columnNames = "user_fk")
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Cart {
 
     @Id
-    @GeneratedValue(
-            strategy = GenerationType.SEQUENCE,
-            generator = "cart_seq"
-    )
-    @SequenceGenerator(
-            name = "cart_seq",
-            sequenceName = "cart_seq",
-            initialValue = 70000001,
-            allocationSize = 10
-    )
-    private Long cartId;
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "cart_seq")
+    @SequenceGenerator(name = "cart_seq", sequenceName = "cart_seq", initialValue = 70000001, allocationSize = 10)
+    private Long id;
+
+    @Column(name = "cart_id", nullable = false, updatable = false, length = 30)
+    private String cartId;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_fk", referencedColumnName = "id", nullable = false)
     private EcommUser user;
 
     @OneToMany(
@@ -39,56 +47,92 @@ public class Cart {
             cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REMOVE},
             orphanRemoval = true
     )
+    @Builder.Default
     private List<CartItem> cartItems = new ArrayList<>();
 
+    @OneToMany(
+            mappedBy = "cart",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @Builder.Default
+    private List<CartCharge> charges = new ArrayList<>();
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private Instant createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
+    @PrePersist
+    private void prePersist() {
+        if (this.cartId == null) {
+            String datePart = LocalDate.now().toString().replace("-", "");
+            String randomPart = UUID.randomUUID().toString().replace("-", "")
+                    .substring(0, 12).toUpperCase();
+            this.cartId = "CART-" + datePart + "-" + randomPart;
+        }
+    }
+
+
+    @Transient
+    public BigDecimal getTotal() {
+        return getSubtotal()
+                .add(getTotalCharges())
+                .setScale(2, RoundingMode.HALF_UP);
+    }
 
     @Transient
     public BigDecimal getSubtotal() {
         return cartItems.stream()
-                .map(cartItem ->
-                        Optional.ofNullable(cartItem.getLineTotal())
-                                .orElse(BigDecimal.ZERO))
+                .map(item -> Optional.ofNullable(item.getLineTotal()).orElse(BigDecimal.ZERO))
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(2, RoundingMode.HALF_UP);
     }
 
     @Transient
+    public BigDecimal getTotalCharges() {
+        return charges.stream()
+                .map(CartCharge::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    @Transient
+    public boolean isEmpty() {
+        return cartItems.isEmpty();
+    }
+
+    @Transient
+    public int getCartQuantity() {
+        return cartItems.stream()
+                .mapToInt(CartItem::getQuantity)
+                .sum();
+    }
+
     public void addProduct(Product product, int quantity) {
-        validateQuantity(quantity);
+        validateProduct(quantity, product);
         findItemByProductId(product.getProductId())
                 .ifPresentOrElse(
-                        cartItem -> cartItem.increaseQuantity(quantity),
-                        () -> addCartItem(
-                                CartItem.builder()
-                                        .cart(this)
-                                        .product(product)
-                                        .quantity(quantity)
-                                        .build()
-                        )
+                        item -> item.increaseQuantity(quantity),
+                        () -> addCartItem(CartItem.builder()
+                                .cart(this)
+                                .product(product)
+                                .quantity(quantity)
+                                .build())
                 );
     }
 
-    @Transient
-    public void updateProductQuantity(Long productId, int quantity) {
-        CartItem cartItem = findItemByProductId(productId)
-                .orElseThrow(() ->
-                        new IllegalStateException("Product not in cart"));
+    public void updateProductQuantity(String productId, int quantity) {
+        CartItem item = findItemByProductId(productId)
+                .orElseThrow(() -> new IllegalStateException("Product not in cart: " + productId));
         if (quantity <= 0) {
-            removeCartItem(cartItem);
+            removeCartItem(item);
             return;
         }
-        cartItem.updateQuantity(quantity);
-    }
-
-    @Transient
-    public void removeProduct(Long productId) {
-        findItemByProductId(productId)
-                .ifPresentOrElse(
-                        this::removeCartItem,
-                        () -> {
-                            throw new IllegalStateException("Product not in cart");
-                        }
-                );
+        item.updateQuantity(quantity);
     }
 
     public void addCartItem(CartItem cartItem) {
@@ -103,18 +147,66 @@ public class Cart {
         cartItem.setCart(null);
     }
 
-    @Transient
-    public Optional<CartItem> findItemByProductId(Long productId) {
+    public void clear() {
+        cartItems.forEach(item -> item.setCart(null));
+        cartItems.clear();
+    }
+
+    public Optional<CartItem> findItemByProductId(String productId) {
+        if (productId == null) return Optional.empty();
         return cartItems.stream()
-                .filter(cartItem -> cartItem.getProduct()
-                        .getProductId()
-                        .equals(productId))
+                .filter(item -> productId.equals(item.getProduct().getProductId()))
                 .findFirst();
     }
 
-    private void validateQuantity(int quantity) {
-        if (quantity <= 0) {
-            throw new IllegalArgumentException("Quantity must be greater than 0");
+    private void validateProduct(int quantity, Product product) {
+        if (quantity <= 0)
+            throw new IllegalArgumentException("Quantity must be greater than 0, got: " + quantity);
+        if (product == null)
+            throw new IllegalArgumentException("Product must not be null");
+        if (!product.isActive())
+            throw new IllegalStateException("Product is no longer available: " + product.getProductId());
+    }
+
+    public void addOrUpdateCharge(ChargeType type, BigDecimal amount, String description) {
+        Optional<CartCharge> existing = findCharge(type);
+        if (existing.isPresent()) {
+            CartCharge charge = existing.get();
+            charge.setAmount(amount);
+            charge.setDescription(description);
+        } else {
+            CartCharge charge = CartCharge.builder()
+                    .type(type)
+                    .amount(amount)
+                    .description(description)
+                    .cart(this)
+                    .build();
+
+            charges.add(charge);
         }
+    }
+
+    public Optional<CartCharge> findCharge(ChargeType type) {
+        return charges.stream()
+                .filter(c -> c.getType() == type)
+                .findFirst();
+    }
+
+    public BigDecimal getChargeAmount(ChargeType type) {
+        return findCharge(type)
+                .map(CartCharge::getAmount)
+                .orElse(BigDecimal.ZERO);
+    }
+
+    public void removeCharge(ChargeType type) {
+        findCharge(type).ifPresent(charge -> {
+            charges.remove(charge);
+            charge.setCart(null);
+        });
+    }
+
+    public void clearCharges() {
+        charges.forEach(c -> c.setCart(null));
+        charges.clear();
     }
 }

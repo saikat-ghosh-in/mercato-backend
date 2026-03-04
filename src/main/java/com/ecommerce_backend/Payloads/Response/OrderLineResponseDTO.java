@@ -8,10 +8,8 @@ import java.time.Instant;
 
 @Getter
 @AllArgsConstructor
-public class OrderLineDto {
-
-    private Long orderLineId;
-    private String orderNumber;
+public class OrderLineResponseDTO {
+    private String orderId;
     private Integer orderLineNumber;
     private String orderLineStatus;
 
@@ -27,7 +25,7 @@ public class OrderLineDto {
     @Getter
     @AllArgsConstructor
     public static class ProductDetails {
-        private Long productId;
+        private String productId;
         private String productName;
         private BigDecimal unitPrice;
     }

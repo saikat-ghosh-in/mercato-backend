@@ -10,23 +10,22 @@ import java.util.Map;
 
 @Getter
 @AllArgsConstructor
-public class OrderDto {
-    private Long orderId;
-    private String orderNumber;
+public class OrderResponseDTO {
+    private String orderId;
     private String orderStatus;
 
     private Customer customer;
     private DeliveryAddress deliveryAddress;
-    private PaymentDto paymentSummary;
+    private PaymentResponseDTO paymentSummary;
 
-    private List<OrderLineDto> orderLines;
+    private List<OrderLineResponseDTO> orderLines;
 
     private String currency;
     private BigDecimal subTotal;
     private BigDecimal charges;
     private BigDecimal totalAmount;
 
-    private Map<String, List<StateTransitionDto>> stateTransitions;
+    private Map<String, List<StateTransitionDTO>> stateTransitions;
     private Instant createDate;
     private Instant updateDate;
 

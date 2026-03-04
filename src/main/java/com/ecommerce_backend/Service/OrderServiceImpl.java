@@ -4,14 +4,14 @@ import com.ecommerce_backend.Entity.*;
 import com.ecommerce_backend.Entity.Fulfillment.*;
 import com.ecommerce_backend.ExceptionHandler.CustomBadRequestException;
 import com.ecommerce_backend.ExceptionHandler.ResourceNotFoundException;
-import com.ecommerce_backend.Payloads.Response.OrderDto;
-import com.ecommerce_backend.Payloads.Response.OrderLineDto;
-import com.ecommerce_backend.Payloads.Response.OrderRequestDto;
+import com.ecommerce_backend.Payloads.Response.OrderResponseDTO;
+import com.ecommerce_backend.Payloads.Response.OrderLineResponseDTO;
+import com.ecommerce_backend.Payloads.Response.OrderCaptureRequestDTO;
 import com.ecommerce_backend.Repository.OrderRepository;
 import com.ecommerce_backend.Utils.AuthUtil;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -22,14 +22,13 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final CartService cartService;
-    private final ProductService productService;
     private final StripeService stripeService;
     private final AddressService addressService;
     private final AuthUtil authUtil;
 
     @Override
     @Transactional
-    public OrderDto placeOrder(OrderRequestDto orderRequestDto) {
+    public OrderResponseDTO placeOrder(OrderCaptureRequestDTO orderCaptureRequestDTO) {
 
         EcommUser currentUser = authUtil.getLoggedInUser();
         Cart cart = cartService.getCartByUser(currentUser);
@@ -37,7 +36,7 @@ public class OrderServiceImpl implements OrderService {
             throw new CustomBadRequestException("Cart is empty");
         }
 
-        Order order = buildOrder(cart, orderRequestDto, currentUser);
+        Order order = buildOrder(cart, orderCaptureRequestDTO, currentUser);
 
         orderRepository.save(order);
         cartService.clearCart();
@@ -46,7 +45,8 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public List<OrderDto> getAllOrders() {
+    @Transactional(readOnly = true)
+    public List<OrderResponseDTO> getAllOrders() {
         List<Order> orders = orderRepository.findAll();
         return orders.stream()
                 .map(this::buildOrderDto)
@@ -54,7 +54,8 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public List<OrderDto> getCurrentUserOrders() {
+    @Transactional(readOnly = true)
+    public List<OrderResponseDTO> getCurrentUserOrders() {
         EcommUser currentUser = authUtil.getLoggedInUser();
         List<Order> orders = orderRepository.findAllByCustomerEmail(currentUser.getEmail());
         return orders.stream()
@@ -63,25 +64,27 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderDto getCurrentUserOrder(String orderNumber) {
+    @Transactional(readOnly = true)
+    public OrderResponseDTO getCurrentUserOrder(String orderNumber) {
         EcommUser currentUser = authUtil.getLoggedInUser();
-        Order order = orderRepository.findByOrderNumberAndCustomerEmail(orderNumber, currentUser.getEmail())
+        Order order = orderRepository.findByOrderIdAndCustomerEmail(orderNumber, currentUser.getEmail())
                 .orElseThrow(()-> new ResourceNotFoundException("Order", "orderNumber", orderNumber));
         return buildOrderDto(order);
     }
 
     @Override
-    public OrderDto getOrder(String orderNumber) {
+    @Transactional(readOnly = true)
+    public OrderResponseDTO getOrder(String orderNumber) {
         Order order = getOrderByOrderNumber(orderNumber);
         return buildOrderDto(order);
     }
 
     private Order getOrderByOrderNumber(String orderNumber) {
-        return orderRepository.findByOrderNumber(orderNumber)
+        return orderRepository.findByOrderId(orderNumber)
                 .orElseThrow(()-> new ResourceNotFoundException("Order", "orderNumber", orderNumber));
     }
 
-    private Order buildOrder(Cart cart, OrderRequestDto orderRequestDto, EcommUser customer) {
+    private Order buildOrder(Cart cart, OrderCaptureRequestDTO orderCaptureRequestDTO, EcommUser customer) {
 
         List<CartItem> cartItems = cart.getCartItems();
 
@@ -91,7 +94,7 @@ public class OrderServiceImpl implements OrderService {
         order.setCustomerEmail(customer.getEmail());
         order.setOrderStatus(OrderStatus.CREATED);
 
-        Address address = addressService.getAddressById(orderRequestDto.getAddressId());
+        Address address = addressService.getAddressById(orderCaptureRequestDTO.getAddressId());
         order.setRecipientName(address.getRecipientName());
         order.setRecipientPhone(address.getRecipientPhone());
         order.setDeliveryAddressLine1(address.getAddressLine1());
@@ -112,8 +115,8 @@ public class OrderServiceImpl implements OrderService {
             orderLine.setLineTotal(cartItem.getLineTotal());
             orderLine.setSellerName(cartItem.getProduct().getProductName());
 
-            EcommUser seller = productService.getSeller(cartItem.getProduct());
-            orderLine.setSellerName(seller.getUsername());
+            EcommUser seller = cartItem.getProduct().getSeller();
+            orderLine.setSellerName(seller.getSellerDisplayName());
             orderLine.setSellerEmail(seller.getEmail());
 
             orderLine.setOrderLineStatus(OrderLineStatus.CREATED);
@@ -127,26 +130,25 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal totalAmount = order.getSubtotal().add(order.getCharges());
         order.setTotalAmount(totalAmount);
 
-        stripeService.initiatePayment(order, PaymentMethod.getFromString(orderRequestDto.getPaymentMethod()));
+        stripeService.initiatePayment(order, PaymentMethod.getFromString(orderCaptureRequestDTO.getPaymentMethod()));
 
         return order;
     }
 
-    private OrderDto buildOrderDto(Order order) {
+    private OrderResponseDTO buildOrderDto(Order order) {
 
-        List<OrderLineDto> orderLineDtoList = order.getOrderLines().stream()
+        List<OrderLineResponseDTO> orderLineResponseDTOList = order.getOrderLines().stream()
                 .map(this::buildOrderLineDto)
                 .toList();
 
-        return new OrderDto(
+        return new OrderResponseDTO(
                 order.getOrderId(),
-                order.getOrderNumber(),
                 order.getOrderStatus().toString(),
-                new OrderDto.Customer(
+                new OrderResponseDTO.Customer(
                         order.getCustomerName(),
                         order.getCustomerEmail()
                 ),
-                new OrderDto.DeliveryAddress(
+                new OrderResponseDTO.DeliveryAddress(
                         order.getRecipientName(),
                         order.getRecipientPhone(),
                         order.getDeliveryAddressLine1(),
@@ -156,36 +158,35 @@ public class OrderServiceImpl implements OrderService {
                         order.getDeliveryPincode()
                 ),
                 stripeService.buildPaymentDto(order.getPayment()),
-                orderLineDtoList,
+                orderLineResponseDTOList,
                 order.getCurrency(),
                 order.getSubtotal(),
                 order.getCharges(),
                 order.getTotalAmount(),
                 null,
-                order.getCreateDate(),
-                order.getUpdateDate()
+                order.getCreatedAt(),
+                order.getUpdatedAt()
         );
     }
 
-    private OrderLineDto buildOrderLineDto(OrderLine orderLine) {
-        return new OrderLineDto(
-                orderLine.getOrderLineId(),
-                orderLine.getOrder().getOrderNumber(),
+    private OrderLineResponseDTO buildOrderLineDto(OrderLine orderLine) {
+        return new OrderLineResponseDTO(
+                orderLine.getOrder().getOrderId(),
                 orderLine.getOrderLineNumber(),
                 orderLine.getOrderLineStatus().toString(),
-                new OrderLineDto.ProductDetails(
+                new OrderLineResponseDTO.ProductDetails(
                         orderLine.getProductId(),
                         orderLine.getProductName(),
                         orderLine.getUnitPrice()
                 ),
-                new OrderLineDto.Seller(
+                new OrderLineResponseDTO.Seller(
                         orderLine.getSellerName(),
                         orderLine.getSellerEmail()
                 ),
                 orderLine.getQuantity(),
                 orderLine.getLineTotal(),
-                orderLine.getCreateDate(),
-                orderLine.getUpdateDate()
+                orderLine.getCreatedAt(),
+                orderLine.getUpdatedAt()
         );
     }
 }

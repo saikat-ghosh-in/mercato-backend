@@ -1,6 +1,5 @@
 package com.ecommerce_backend.Service;
 
-import com.ecommerce_backend.Entity.EcommUser;
 import com.ecommerce_backend.Entity.Product;
 import com.ecommerce_backend.Payloads.Request.ProductRequestDTO;
 import com.ecommerce_backend.Payloads.Request.ProductSupplyUpdateRequestDTO;
@@ -14,23 +13,21 @@ import java.util.List;
 
 public interface ProductService {
 
-    ProductResponseDTO addProduct(Long categoryId, ProductRequestDTO productRequestDTO);
+    ProductResponseDTO addProduct(String categoryId, ProductRequestDTO productRequestDTO);
 
     ProductResponse getProducts(Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder, String categoryName, String keyword);
 
-    ProductResponseDTO getProduct(Long productId);
+    ProductResponseDTO getProduct(String productId);
 
-    ProductResponseDTO updateProduct(Long productId, Long categoryId, ProductRequestDTO productRequestDTO);
+    ProductResponseDTO updateProduct(String productId, String categoryId, ProductRequestDTO productRequestDTO);
 
-    void deleteProduct(Long productId);
+    void deleteProduct(String productId);
 
-    ProductResponseDTO uploadProductImage(Long productId, MultipartFile image) throws IOException;
+    ProductResponseDTO uploadProductImage(String productId, MultipartFile image) throws IOException;
 
-    Product getProductByIdForUpdate(Long productId);
+    Product getProductByIdForUpdate(String productId);
 
     List<ProductSupplyUpdateResponseDTO> updateProductInventory(List<ProductSupplyUpdateRequestDTO> productSupplyUpdateRequestDTOs);
 
     String addDummyProducts();
-
-    EcommUser getSeller(Product product);
 }

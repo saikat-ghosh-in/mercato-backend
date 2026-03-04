@@ -12,7 +12,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.io.Serial;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Data
@@ -22,11 +21,14 @@ public class UserDetailsImpl implements UserDetails {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    private Long userId;
+    private Long id;
+    private String userId;
     private String username;
     private String email;
     @JsonIgnore
     private String password;
+    private boolean enabled;
+    private boolean accountNonLocked;
     private Collection<? extends GrantedAuthority> authorities;
 
     public static UserDetailsImpl build(EcommUser user) {
@@ -35,10 +37,13 @@ public class UserDetailsImpl implements UserDetails {
                 .collect(Collectors.toList());
 
         return new UserDetailsImpl(
+                user.getId(),
                 user.getUserId(),
                 user.getUsername(),
                 user.getEmail(),
                 user.getPassword(),
+                user.isEnabled(),
+                !user.isAccountLocked(),
                 authorities
         );
     }
@@ -56,13 +61,5 @@ public class UserDetailsImpl implements UserDetails {
     @Override
     public String getUsername() {
         return username;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null || getClass() != obj.getClass()) return false;
-        UserDetailsImpl user = (UserDetailsImpl) obj;
-        return Objects.equals(userId, user.userId);
     }
 }

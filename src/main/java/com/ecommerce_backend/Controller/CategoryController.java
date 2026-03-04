@@ -1,7 +1,8 @@
 package com.ecommerce_backend.Controller;
 
 import com.ecommerce_backend.Configuration.AppConstants;
-import com.ecommerce_backend.Payloads.Response.CategoryDto;
+import com.ecommerce_backend.Payloads.Request.CategoryRequestDTO;
+import com.ecommerce_backend.Payloads.Response.CategoryResponseDTO;
 import com.ecommerce_backend.Payloads.Response.CategoryResponse;
 import com.ecommerce_backend.Service.CategoryService;
 import lombok.RequiredArgsConstructor;
@@ -17,9 +18,9 @@ public class CategoryController {
     private final CategoryService categoryService;
 
     @PostMapping("/admin/categories/create")
-    public ResponseEntity<CategoryDto> createCategory(@RequestBody CategoryDto categoryDto) {
-        CategoryDto savedCategoryDto = categoryService.createCategory(categoryDto);
-        return new ResponseEntity<>(savedCategoryDto, HttpStatus.CREATED);
+    public ResponseEntity<CategoryResponseDTO> createCategory(@RequestBody CategoryRequestDTO categoryRequestDTO) {
+        CategoryResponseDTO savedCategoryResponseDTO = categoryService.createCategory(categoryRequestDTO);
+        return new ResponseEntity<>(savedCategoryResponseDTO, HttpStatus.CREATED);
     }
 
     @GetMapping("/public/categories")
@@ -32,19 +33,20 @@ public class CategoryController {
     }
 
     @GetMapping("/public/categories/{categoryId}")
-    public ResponseEntity<CategoryDto> getCategoryById(@PathVariable Long categoryId) {
-        CategoryDto categoryDto = categoryService.getCategory(categoryId);
-        return new ResponseEntity<>(categoryDto, HttpStatus.OK);
+    public ResponseEntity<CategoryResponseDTO> getCategoryById(@PathVariable String categoryId) {
+        CategoryResponseDTO categoryResponseDTO = categoryService.getCategory(categoryId);
+        return new ResponseEntity<>(categoryResponseDTO, HttpStatus.OK);
     }
 
-    @PutMapping("/public/categories/update")
-    public ResponseEntity<CategoryDto> updateCategory(@RequestBody CategoryDto categoryDto) {
-        CategoryDto updatedCategoryDto = categoryService.updateCategory(categoryDto);
-        return new ResponseEntity<>(updatedCategoryDto, HttpStatus.OK);
+    @PutMapping("/admin/categories/{categoryId}")
+    public ResponseEntity<CategoryResponseDTO> updateCategory(@RequestBody String categoryId,
+                                                              @RequestBody CategoryRequestDTO categoryRequestDTO) {
+        CategoryResponseDTO updatedCategoryResponseDTO = categoryService.updateCategory(categoryId, categoryRequestDTO);
+        return new ResponseEntity<>(updatedCategoryResponseDTO, HttpStatus.OK);
     }
 
     @DeleteMapping("/admin/categories/{categoryId}")
-    public ResponseEntity<String> deleteCategory(@PathVariable Long categoryId) {
+    public ResponseEntity<String> deleteCategory(@PathVariable String categoryId) {
         categoryService.deleteCategory(categoryId);
         return new ResponseEntity<>("Category deleted successfully", HttpStatus.OK);
     }

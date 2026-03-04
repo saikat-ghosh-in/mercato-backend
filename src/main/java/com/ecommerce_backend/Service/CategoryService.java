@@ -1,24 +1,27 @@
 package com.ecommerce_backend.Service;
 
 import com.ecommerce_backend.Entity.Category;
-import com.ecommerce_backend.Payloads.Response.CategoryDto;
+import com.ecommerce_backend.Payloads.Request.CategoryRequestDTO;
+import com.ecommerce_backend.Payloads.Response.CategoryResponseDTO;
 import com.ecommerce_backend.Payloads.Response.CategoryResponse;
 
 public interface CategoryService {
 
-    CategoryDto createCategory(CategoryDto categoryDto);
+    CategoryResponseDTO createCategory(CategoryRequestDTO categoryRequestDTO);
 
-    CategoryDto getCategory(Long categoryId);
+    CategoryResponseDTO getCategory(String categoryId);
 
     CategoryResponse getAllCategories(Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder);
 
-    CategoryDto updateCategory(CategoryDto newCategoryDto);
+    CategoryResponseDTO updateCategory(String categoryId, CategoryRequestDTO categoryRequestDTO);
 
-    void deleteCategory(Long categoryId);
+    void deleteCategory(String categoryId);
 
-    Category getCategoryById(Long categoryId);
+    Category getCategoryByCategoryId(String categoryId);
 
     boolean existsByCategoryName(String categoryName);
+
+    boolean existsByCategoryId(String categoryId);
 
     String addDummyCategories();
 }

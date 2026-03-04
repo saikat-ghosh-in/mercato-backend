@@ -11,15 +11,15 @@ public interface AddressService {
 
     List<AddressResponseDTO> getAllAddresses();
 
-    AddressResponseDTO getAddress(Long addressId);
+    AddressResponseDTO getAddress(String addressId);
 
     List<AddressResponseDTO> getUserAddresses();
 
-    AddressResponseDTO updateAddress(Long addressId, AddressRequestDTO addressRequestDTO);
+    AddressResponseDTO updateAddress(String addressId, AddressRequestDTO addressRequestDTO);
 
-    void deleteAddress(Long addressId);
+    void deleteAddress(String addressId);
 
-    Address getAddressById(Long addressId);
+    Address getAddressById(String addressId);
 
     AddressResponseDTO buildAddressResponseDTO(Address address);
 }

@@ -1,6 +1,5 @@
 package com.ecommerce_backend.Entity.Fulfillment;
 
-import com.ecommerce_backend.Entity.EcommUser;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -13,7 +12,7 @@ import java.time.Instant;
 @Table(
         name = "order_state_transitions",
         indexes = {
-                @Index(name = "idx_transition_order", columnList = "order_id"),
+                @Index(name = "idx_transition_order_fk", columnList = "order_fk"),
                 @Index(name = "idx_transition_status", columnList = "status"),
                 @Index(name = "idx_transition_time", columnList = "occurred_at")
         }
@@ -31,7 +30,7 @@ public class StateTransition {
     private Long stateTransitionId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", nullable = false)
+    @JoinColumn(name = "order_fk", referencedColumnName = "id", nullable = false)
     private Order order;
 
     @NotNull

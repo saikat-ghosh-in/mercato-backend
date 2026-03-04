@@ -2,8 +2,8 @@ package com.ecommerce_backend.Controller;
 
 import com.ecommerce_backend.Payloads.Request.PaymentConfirmationRequestDTO;
 import com.ecommerce_backend.Payloads.Request.StripePaymentRequestDTO;
-import com.ecommerce_backend.Payloads.Response.OrderDto;
-import com.ecommerce_backend.Payloads.Response.OrderRequestDto;
+import com.ecommerce_backend.Payloads.Response.OrderResponseDTO;
+import com.ecommerce_backend.Payloads.Response.OrderCaptureRequestDTO;
 import com.ecommerce_backend.Payloads.Response.PaymentConfirmationResponseDTO;
 import com.ecommerce_backend.Service.OrderService;
 import com.ecommerce_backend.Service.StripeService;
@@ -25,9 +25,9 @@ public class OrderController {
     private final StripeService stripeService;
 
     @PostMapping("/users/orders/capture")
-    public ResponseEntity<OrderDto> createOrder(@RequestBody OrderRequestDto orderRequestDto) {
+    public ResponseEntity<OrderResponseDTO> createOrder(@RequestBody OrderCaptureRequestDTO orderCaptureRequestDTO) {
 
-        OrderDto order = orderService.placeOrder(orderRequestDto);
+        OrderResponseDTO order = orderService.placeOrder(orderCaptureRequestDTO);
         return new ResponseEntity<>(order, HttpStatus.CREATED);
     }
 
@@ -46,30 +46,30 @@ public class OrderController {
     }
 
     @GetMapping("/admin/orders")
-    public ResponseEntity<List<OrderDto>> getAllOrders() {
+    public ResponseEntity<List<OrderResponseDTO>> getAllOrders() {
 
-        List<OrderDto> orders = orderService.getAllOrders();
+        List<OrderResponseDTO> orders = orderService.getAllOrders();
         return new ResponseEntity<>(orders, HttpStatus.OK);
     }
 
     @GetMapping("/users/orders")
-    public ResponseEntity<List<OrderDto>> getCurrentUserOrders() {
+    public ResponseEntity<List<OrderResponseDTO>> getCurrentUserOrders() {
 
-        List<OrderDto> orders = orderService.getCurrentUserOrders();
+        List<OrderResponseDTO> orders = orderService.getCurrentUserOrders();
         return new ResponseEntity<>(orders, HttpStatus.OK);
     }
 
     @GetMapping("/users/orders/{orderNumber}")
-    public ResponseEntity<OrderDto> getCurrentUserOrder(@PathVariable String orderNumber) {
+    public ResponseEntity<OrderResponseDTO> getCurrentUserOrder(@PathVariable String orderNumber) {
 
-        OrderDto order = orderService.getCurrentUserOrder(orderNumber);
+        OrderResponseDTO order = orderService.getCurrentUserOrder(orderNumber);
         return new ResponseEntity<>(order, HttpStatus.OK);
     }
 
     @GetMapping("/admin/orders/{orderNumber}")
-    public ResponseEntity<OrderDto> getOrder(@PathVariable String orderNumber) {
+    public ResponseEntity<OrderResponseDTO> getOrder(@PathVariable String orderNumber) {
 
-        OrderDto order = orderService.getOrder(orderNumber);
+        OrderResponseDTO order = orderService.getOrder(orderNumber);
         return new ResponseEntity<>(order, HttpStatus.OK);
     }
 }

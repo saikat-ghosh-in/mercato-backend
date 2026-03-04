@@ -7,7 +7,7 @@ import java.time.Instant;
 
 @Data
 @AllArgsConstructor
-public class StateTransitionDto {
+public class StateTransitionDTO {
     private Long stateTransitionId;
     private String orderNumber;
     private Integer orderLineNumber;

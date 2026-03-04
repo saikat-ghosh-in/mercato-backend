@@ -7,7 +7,7 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public class ProductSupplyUpdateRequestDTO {
-    private Long productId;
+    private String productId;
     private SupplyType supplyType;
     private Integer quantity;
 }

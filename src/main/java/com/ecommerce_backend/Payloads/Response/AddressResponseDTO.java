@@ -6,8 +6,8 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public class AddressResponseDTO {
-    private Long addressId;
-    private Long userId;
+    private String addressId;
+    private String userId;
     private String userName;
     private String recipientName;
     private String recipientPhone;

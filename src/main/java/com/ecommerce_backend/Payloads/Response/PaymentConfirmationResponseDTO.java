@@ -14,8 +14,7 @@ import java.math.BigDecimal;
 public class PaymentConfirmationResponseDTO {
     private boolean success;
     private String message;
-    private String orderNumber;
-    private Long orderId;
+    private String orderId;
     private BigDecimal amount;
     private String paymentStatus;
     private String pgPaymentId;

@@ -8,7 +8,7 @@ import com.ecommerce_backend.ExceptionHandler.ResourceNotFoundException;
 import com.ecommerce_backend.Payloads.Request.PaymentConfirmationRequestDTO;
 import com.ecommerce_backend.Payloads.Request.StripePaymentRequestDTO;
 import com.ecommerce_backend.Payloads.Response.PaymentConfirmationResponseDTO;
-import com.ecommerce_backend.Payloads.Response.PaymentDto;
+import com.ecommerce_backend.Payloads.Response.PaymentResponseDTO;
 import com.ecommerce_backend.Repository.OrderRepository;
 import com.ecommerce_backend.Repository.PaymentRepository;
 import com.ecommerce_backend.Utils.AuthUtil;
@@ -21,10 +21,10 @@ import com.stripe.param.CustomerCreateParams;
 import com.stripe.param.CustomerSearchParams;
 import com.stripe.param.PaymentIntentCreateParams;
 import jakarta.annotation.PostConstruct;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 
@@ -47,6 +47,7 @@ public class StripeServiceImpl implements StripeService {
     private final AddressService addressService;
 
     @Override
+    @Transactional(readOnly = true)
     public PaymentIntent createStripePaymentIntent(StripePaymentRequestDTO stripePaymentRequestDTO) throws StripeException {
         EcommUser user = authUtil.getLoggedInUser();
         Customer customer;
@@ -108,7 +109,7 @@ public class StripeServiceImpl implements StripeService {
         paymentRepository.save(payment);
 
         // 4. Find and update order
-        Order order = orderRepository.findByOrderNumber(paymentConfirmationRequestDTO.getOrderNumber())
+        Order order = orderRepository.findByOrderId(paymentConfirmationRequestDTO.getOrderNumber())
                 .orElseThrow(() -> new CustomBadRequestException("Order not found"));
         order.setOrderStatus(OrderStatus.PLACED);
         order.setPaymentStatus(PaymentStatus.SUCCESS);
@@ -118,7 +119,6 @@ public class StripeServiceImpl implements StripeService {
         return PaymentConfirmationResponseDTO.builder()
                 .success(true)
                 .message("Payment confirmation successful")
-                .orderNumber(order.getOrderNumber())
                 .orderId(order.getOrderId())
                 .amount(order.getTotalAmount())
                 .paymentStatus("completed")
@@ -164,8 +164,8 @@ public class StripeServiceImpl implements StripeService {
     }
 
     @Override
-    public PaymentDto buildPaymentDto(Payment payment) {
-        return new PaymentDto(
+    public PaymentResponseDTO buildPaymentDto(Payment payment) {
+        return new PaymentResponseDTO(
                 payment.getPaymentId(),
                 payment.getAmount(),
                 payment.getCurrency(),

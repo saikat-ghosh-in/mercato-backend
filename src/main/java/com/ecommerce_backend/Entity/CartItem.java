@@ -6,10 +6,18 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.Optional;
 
 @Entity
-@Table(name = "ecomm_cart_items")
+@Table(
+        name = "ecomm_cart_items",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_cart_item_cart_product", columnNames = {"cart_fk", "product_fk"})
+        },
+        indexes = {
+                @Index(name = "idx_cart_item_cart_fk",    columnList = "cart_fk"),
+                @Index(name = "idx_cart_item_product_fk", columnList = "product_fk")
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -31,11 +39,11 @@ public class CartItem {
     private Long cartItemId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "cart_id", nullable = false)
+    @JoinColumn(name = "cart_fk", referencedColumnName = "id", nullable = false)
     private Cart cart;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "product_id", nullable = false)
+    @JoinColumn(name = "product_fk", referencedColumnName = "id", nullable = false)
     private Product product;
 
     @Column(nullable = false)

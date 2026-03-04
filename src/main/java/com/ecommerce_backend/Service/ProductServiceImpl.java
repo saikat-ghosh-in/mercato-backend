@@ -5,6 +5,7 @@ import com.ecommerce_backend.Entity.Category;
 import com.ecommerce_backend.Entity.EcommUser;
 import com.ecommerce_backend.Entity.Product;
 import com.ecommerce_backend.Entity.SupplyType;
+import com.ecommerce_backend.ExceptionHandler.ForbiddenOperationException;
 import com.ecommerce_backend.ExceptionHandler.ResourceAlreadyExistsException;
 import com.ecommerce_backend.ExceptionHandler.ResourceNotFoundException;
 import com.ecommerce_backend.Payloads.Request.ProductRequestDTO;
@@ -23,7 +24,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -56,11 +56,14 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public ProductResponseDTO addProduct(Long categoryId, ProductRequestDTO productRequestDTO) {
+    public ProductResponseDTO addProduct(String categoryId, ProductRequestDTO productRequestDTO) {
 
         validateIfAlreadyExists(productRequestDTO.getProductName()); // throws
-        Category category = categoryService.getCategoryById(categoryId); // throws
+        Category category = categoryService.getCategoryByCategoryId(categoryId); // throws
         EcommUser user = authUtil.getLoggedInUser();
+        if (user == null || !user.isSeller() || !user.isAdmin()) {
+            throw new ForbiddenOperationException("You are not authorized to perform this action.");
+        }
 
         Product product = new Product();
         product.setProductName(productRequestDTO.getProductName());
@@ -71,7 +74,7 @@ public class ProductServiceImpl implements ProductService {
         product.setRetailPrice(productRequestDTO.getRetailPrice());
         product.setDiscountPercent(productRequestDTO.getDiscountPercent());
         product.setCategory(category);
-        product.setUser(user);
+        product.setSeller(user);
 
         Product savedProduct = productRepository.save(product);
         return buildProductDto(savedProduct);
@@ -81,15 +84,16 @@ public class ProductServiceImpl implements ProductService {
     @Transactional(readOnly = true)
     public ProductResponse getProducts(Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder, String categoryName, String keyword) {
 
-        validateSortBy(sortBy);
-        boolean sortBySellingPrice = "sellingPrice".equalsIgnoreCase(sortBy);
-
         Sort sort = Sort.unsorted();
-        if (!sortBySellingPrice) {
-            sort = "desc".equalsIgnoreCase(sortingOrder)
-                    ? Sort.by(sortBy).descending()
-                    : Sort.by(sortBy).ascending();
+        boolean sortBySellingPrice = "sellingPrice".equalsIgnoreCase(sortBy);
+        if(isSortByAllowed(sortBy)) {
+            if (!sortBySellingPrice) {
+                sort = "desc".equalsIgnoreCase(sortingOrder)
+                        ? Sort.by(sortBy).descending()
+                        : Sort.by(sortBy).ascending();
+            }
         }
+
 
         Specification<Product> spec = Specification.unrestricted();
 
@@ -106,7 +110,7 @@ public class ProductServiceImpl implements ProductService {
         }
 
         /* add category filter */
-        if (categoryName != null && categoryService.existsByCategoryName(categoryName)) {
+        if (categoryName != null && !categoryName.isBlank()) {
             spec = spec.and((root, query, cb) ->
                     cb.equal(root.get("category").get("categoryName"), categoryName)
             );
@@ -153,24 +157,32 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public ProductResponseDTO getProduct(Long productId) {
+    @Transactional(readOnly = true)
+    public ProductResponseDTO getProduct(String productId) {
         if (productId == null) {
             throw new IllegalArgumentException("productId must not be null!");
         }
-        Product product = productRepository.findById(productId)
+        Product product = productRepository.findByProductId(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
         return buildProductDto(product);
     }
 
     @Override
     @Transactional
-    public ProductResponseDTO updateProduct(Long productId, Long categoryId, ProductRequestDTO productRequestDTO) {
-
+    public ProductResponseDTO updateProduct(String productId, String categoryId, ProductRequestDTO productRequestDTO) {
+        EcommUser user = authUtil.getLoggedInUser();
         Product product = getProductByIdForUpdate(productId); // throws
 
-        validateIfAlreadyExists(productRequestDTO.getProductName()); // throws
+        if (!user.isAdmin() && !user.getUserId().equals(product.getSeller().getUserId())) {
+            throw new ForbiddenOperationException("You are not authorized to perform this action.");
+        }
+
+        if (productRequestDTO.getProductName() != null && !productRequestDTO.getProductName().equals(product.getProductName())) {
+            validateIfAlreadyExists(productRequestDTO.getProductName()); // throws
+        }
+
         if (categoryId != null)
-            product.setCategory(categoryService.getCategoryById(categoryId)); // throws if category not found
+            product.setCategory(categoryService.getCategoryByCategoryId(categoryId)); // throws if category not found
 
         product.setProductName(productRequestDTO.getProductName());
         product.setActive(productRequestDTO.isActive());
@@ -185,15 +197,19 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    @PreAuthorize("hasRole('ADMIN')")
-    public void deleteProduct(Long productId) {
+    public void deleteProduct(String productId) {
+        EcommUser user = authUtil.getLoggedInUser();
         Product product = getProductByIdForUpdate(productId);
+
+        if (!user.isAdmin() && !user.getUserId().equals(product.getSeller().getUserId())) {
+            throw new ForbiddenOperationException("You are not authorized to perform this action.");
+        }
         productRepository.delete(product);
     }
 
     @Override
     @Transactional
-    public ProductResponseDTO uploadProductImage(Long productId, MultipartFile image) throws IOException {
+    public ProductResponseDTO uploadProductImage(String productId, MultipartFile image) throws IOException {
         if (image == null || image.isEmpty()) {
             throw new IllegalArgumentException("Image file must not be empty");
         }
@@ -202,7 +218,12 @@ public class ProductServiceImpl implements ProductService {
             throw new IllegalArgumentException("Image size must not exceed 100 KB");
         }
 
+        EcommUser user = authUtil.getLoggedInUser();
         Product product = getProductByIdForUpdate(productId);
+
+        if (!user.isAdmin() && !user.getUserId().equals(product.getSeller().getUserId())) {
+            throw new ForbiddenOperationException("You are not authorized to perform this action.");
+        }
 
         String imageFilePath = fileService.uploadProductImage(productsImageFolder, image, productId);
         product.setImagePath(imageFilePath);
@@ -212,11 +233,11 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public Product getProductByIdForUpdate(Long productId) {
+    public Product getProductByIdForUpdate(String productId) {
         if (productId == null) {
             throw new IllegalArgumentException("productId must not be null!");
         }
-        return productRepository.findByIdForUpdate(productId)
+        return productRepository.findByProductIdForUpdate(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
     }
 
@@ -254,7 +275,10 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public String addDummyProducts() {
-        EcommUser seller = authUtil.getLoggedInUser();
+        EcommUser user = authUtil.getLoggedInUser();
+        if (!user.isAdmin()) {
+            throw new ForbiddenOperationException("You are not authorized to perform this action.");
+        }
 
         List<Category> categories = categoryRepository.findAll();
         if (categories.isEmpty()) {
@@ -275,7 +299,7 @@ public class ProductServiceImpl implements ProductService {
             p.setRetailPrice(new BigDecimal(500 + (i * 25)));
             p.setDiscountPercent(new BigDecimal(i % 20)); // 0–19%
             p.setCategory(category);
-            p.setUser(seller);
+            p.setSeller(user);
 
             products.add(p);
         }
@@ -284,10 +308,6 @@ public class ProductServiceImpl implements ProductService {
         return "success";
     }
 
-    @Override
-    public EcommUser getSeller(Product product) {
-        return product.getUser();
-    }
 
     private ProductResponseDTO buildProductDto(Product product) {
         return new ProductResponseDTO(
@@ -295,19 +315,21 @@ public class ProductServiceImpl implements ProductService {
                 product.getProductName(),
                 product.isActive(),
                 product.getCategory().getCategoryId(),
+                product.getCategory().getCategoryName(),
                 constructImageUrl(product.getImagePath()),
                 product.getDescription(),
                 product.getQuantity(),
                 product.getRetailPrice(),
                 product.getDiscountPercent(),
                 product.getSellingPrice(),
-                product.getUser().getUserId(),
-                product.getUpdateDate()
+                product.getSeller().getSellerDisplayName(),
+                product.getCreatedAt(),
+                product.getUpdatedAt()
         );
     }
 
     private String constructImageUrl(String imagePath) {
-        if(imagePath == null || imagePath.isEmpty() || imagePath.equals(placeholderImageUrl)) {
+        if (imagePath == null || imagePath.isEmpty() || imagePath.equals(placeholderImageUrl)) {
             return placeholderImageUrl;
         }
         return imageBaseUrl.endsWith("/") ? imageBaseUrl + imagePath : imageBaseUrl + "/" + imagePath;
@@ -319,9 +341,7 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
-    private void validateSortBy(String sortBy) {
-        if (!AppConstants.ALLOWED_SORT_PRODUCT_FIELDS.contains(sortBy)) {
-            throw new IllegalArgumentException("Invalid sortBy value: " + sortBy);
-        }
+    private boolean isSortByAllowed(String sortBy) {
+        return AppConstants.ALLOWED_SORT_PRODUCT_FIELDS.contains(sortBy);
     }
 }

@@ -2,6 +2,7 @@ package com.ecommerce_backend.Utils;
 
 import com.ecommerce_backend.Configuration.AppConstants;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -14,7 +15,8 @@ import java.nio.file.StandardCopyOption;
 public class FileServiceImpl implements FileService {
 
     @Override
-    public String uploadProductImage(String imagesFolderPath, MultipartFile productImage, Long productId) throws IOException {
+    @Transactional
+    public String uploadProductImage(String imagesFolderPath, MultipartFile productImage, String productId) throws IOException {
 
         String originalName = productImage.getOriginalFilename();
         String extension = "";

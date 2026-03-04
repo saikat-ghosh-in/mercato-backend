@@ -7,10 +7,10 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public class OrderRequestDto {
+public class OrderCaptureRequestDTO {
 
     @NotNull(message = "addressId is required")
-    private Long addressId;
+    private String addressId;
 
     @NotNull(message = "paymentMethod is required")
     @Pattern(

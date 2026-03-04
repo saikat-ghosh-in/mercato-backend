@@ -8,8 +8,8 @@ import java.time.Instant;
 
 @Getter
 @AllArgsConstructor
-public class PaymentDto {
-    private Long paymentId;
+public class PaymentResponseDTO {
+    private String paymentId;
     private BigDecimal amount;
     private String currency;
     private String paymentMethod;

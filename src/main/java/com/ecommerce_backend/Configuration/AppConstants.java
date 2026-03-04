@@ -11,7 +11,8 @@ public class AppConstants {
 
     public static final Set<String> ALLOWED_SORT_CATEGORY_FIELDS = Set.of(
             "categoryId",
-            "categoryName"
+            "categoryName",
+            "createdAt"
     );
     public static final Set<String> ALLOWED_SORT_PRODUCT_FIELDS = Set.of(
             "productId",
@@ -19,7 +20,8 @@ public class AppConstants {
             "quantity",
             "retailPrice",
             "discountPercent",
-            "sellingPrice"
+            "sellingPrice",
+            "createdAt"
     );
 
     public static final String PRODUCT_IMAGE_PATH_PREFIX = "products/";

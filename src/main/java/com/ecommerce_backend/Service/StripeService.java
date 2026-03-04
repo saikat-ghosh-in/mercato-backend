@@ -6,7 +6,7 @@ import com.ecommerce_backend.Entity.Fulfillment.PaymentMethod;
 import com.ecommerce_backend.Payloads.Request.PaymentConfirmationRequestDTO;
 import com.ecommerce_backend.Payloads.Request.StripePaymentRequestDTO;
 import com.ecommerce_backend.Payloads.Response.PaymentConfirmationResponseDTO;
-import com.ecommerce_backend.Payloads.Response.PaymentDto;
+import com.ecommerce_backend.Payloads.Response.PaymentResponseDTO;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
 
@@ -16,7 +16,7 @@ public interface StripeService {
 
     void initiatePayment(Order order, PaymentMethod paymentMethod);
 
-    PaymentDto buildPaymentDto(Payment payment);
+    PaymentResponseDTO buildPaymentDto(Payment payment);
 
     PaymentConfirmationResponseDTO confirmPayment(PaymentConfirmationRequestDTO paymentConfirmationRequestDTO);
 }

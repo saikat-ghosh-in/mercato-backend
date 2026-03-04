@@ -6,9 +6,20 @@ import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.UUID;
 
 @Entity
-@Table(name = "addresses")
+@Table(
+        name = "addresses",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_address_address_id", columnNames = "address_id")
+        }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -25,7 +36,10 @@ public class Address {
             initialValue = 50000001,
             allocationSize = 10
     )
-    private Long addressId;
+    private Long id;
+
+    @Column(name = "address_id", nullable = false, updatable = false, length = 30)
+    private String addressId;
 
     @NotBlank
     @Column(nullable = false)
@@ -60,4 +74,15 @@ public class Address {
     @ManyToOne
     @JoinColumn(name = "user_id")
     private EcommUser user;
+
+
+    @PrePersist
+    private void prePersist() {
+        if (this.addressId == null) {
+            String datePart = LocalDate.now().toString().replace("-", "");
+            String randomPart = UUID.randomUUID().toString().replace("-", "")
+                    .substring(0, 6).toUpperCase();
+            this.addressId = "ADR-" + datePart + "-" + randomPart;
+        }
+    }
 }

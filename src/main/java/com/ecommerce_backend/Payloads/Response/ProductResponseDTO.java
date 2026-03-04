@@ -9,16 +9,18 @@ import java.time.Instant;
 @Data
 @AllArgsConstructor
 public class ProductResponseDTO {
-    private final Long productId;
+    private final String productId;
     private final String productName;
     private final boolean active;
-    private final Long categoryId;
+    private final String categoryId;
+    private final String categoryName;
     private final String imageUrl;
     private final String description;
     private final Integer quantity;
     private final BigDecimal retailPrice;
     private final BigDecimal discountPercent;
     private final BigDecimal sellingPrice;
-    private final Long sellerId;
-    private final Instant updateDate;
+    private final String seller;
+    private final Instant createdAt;
+    private final Instant updatedAt;
 }

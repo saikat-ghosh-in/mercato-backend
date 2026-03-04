@@ -18,11 +18,11 @@ public interface CartService {
 
     CartResponseDTO updateProductQuantityInCart(CartItemRequestDTO cartItemRequestDTO);
 
-    void deleteProductFromCart(Long productId);
+    void deleteProductFromCart(String productId);
 
     void clearCart();
 
     List<CartResponseDTO> getAllCarts();
 
-    CartResponseDTO getCartById(Long cartId);
+    CartResponseDTO getCartById(String cartId);
 }

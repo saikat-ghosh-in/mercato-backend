@@ -2,11 +2,15 @@ package com.ecommerce_backend.Service;
 
 import com.ecommerce_backend.Configuration.AppConstants;
 import com.ecommerce_backend.Entity.Category;
+import com.ecommerce_backend.Entity.EcommUser;
+import com.ecommerce_backend.ExceptionHandler.ForbiddenOperationException;
 import com.ecommerce_backend.ExceptionHandler.ResourceAlreadyExistsException;
 import com.ecommerce_backend.ExceptionHandler.ResourceNotFoundException;
-import com.ecommerce_backend.Payloads.Response.CategoryDto;
+import com.ecommerce_backend.Payloads.Request.CategoryRequestDTO;
+import com.ecommerce_backend.Payloads.Response.CategoryResponseDTO;
 import com.ecommerce_backend.Payloads.Response.CategoryResponse;
 import com.ecommerce_backend.Repository.CategoryRepository;
+import com.ecommerce_backend.Utils.AuthUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -16,27 +20,24 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
+    private final AuthUtil authUtil;
 
 
     @Override
     @Transactional
-    public CategoryDto createCategory(CategoryDto categoryDto) {
-        validateFields(categoryDto); // throws
-        validateIfAlreadyExists(categoryDto); // throws
+    public CategoryResponseDTO createCategory(CategoryRequestDTO categoryRequestDTO) {
+        String categoryName = categoryRequestDTO.getCategoryName();
+        validateCategory(categoryName); // throws
 
         Category category = new Category();
-        category.setCategoryName(categoryDto.getCategoryName());
-        category.setUpdateUser(categoryDto.getUpdateUser());
+        category.setCategoryName(categoryName);
 
         Category savedCategory = categoryRepository.save(category);
         return buildCategoryDto(savedCategory);
@@ -54,12 +55,12 @@ public class CategoryServiceImpl implements CategoryService {
 
         Page<Category> categoryPage = categoryRepository.findAll(pageDetails);
         List<Category> categories = categoryPage.getContent();
-        List<CategoryDto> categoryDtoList = categories.stream()
+        List<CategoryResponseDTO> categoryResponseDTOList = categories.stream()
                 .map(this::buildCategoryDto)
                 .toList();
 
         return CategoryResponse.builder()
-                .content(categoryDtoList)
+                .content(categoryResponseDTOList)
                 .pageNumber(categoryPage.getNumber())
                 .pageSize(categoryPage.getSize())
                 .totalElements(categoryPage.getTotalElements())
@@ -69,25 +70,20 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    public CategoryDto getCategory(Long categoryId) {
-        Category category = getCategoryById(categoryId);
+    @Transactional(readOnly = true)
+    public CategoryResponseDTO getCategory(String categoryId) {
+        Category category = this.getCategoryByCategoryId(categoryId);
         return buildCategoryDto(category);
     }
 
     @Override
     @Transactional
-    public CategoryDto updateCategory(CategoryDto categoryDto) {
-        validateFields(categoryDto); // throws
+    public CategoryResponseDTO updateCategory(String categoryId, CategoryRequestDTO categoryRequestDTO) {
+        String categoryName = categoryRequestDTO.getCategoryName();
+        validateCategory(categoryRequestDTO.getCategoryName()); // throws
 
-        String categoryName = categoryDto.getCategoryName();
-        Optional<Category> categoryByName = categoryRepository.findByCategoryName(categoryName);
-        if (categoryByName.isPresent() && !categoryByName.get().getCategoryId().equals(categoryDto.getCategoryId())) {
-            throw new ResourceAlreadyExistsException("Category", "categoryName", categoryName);
-        }
-
-        Category category = getCategoryById(categoryDto.getCategoryId()); // throws
+        Category category = this.getCategoryByCategoryId(categoryId); // throws
         category.setCategoryName(categoryName);
-        category.setUpdateUser(categoryDto.getUpdateUser());
 
         Category savedCategory = categoryRepository.save(category);
         return buildCategoryDto(savedCategory);
@@ -96,17 +92,17 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
-    public void deleteCategory(Long categoryId) {
-        Category category = getCategoryById(categoryId); // throws
+    public void deleteCategory(String categoryId) {
+        Category category = this.getCategoryByCategoryId(categoryId); // throws
         categoryRepository.delete(category);
     }
 
     @Override
-    public Category getCategoryById(Long categoryId) {
+    public Category getCategoryByCategoryId(String categoryId) {
         if (categoryId == null) {
             throw new IllegalArgumentException("categoryId must not be null");
         }
-        return categoryRepository.findById(categoryId)
+        return categoryRepository.findByCategoryId(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "categoryId", categoryId));
     }
 
@@ -116,69 +112,75 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    @Transactional
-    public String addDummyCategories() {
-        Map<String, String> categoryMap = new HashMap<>();
-
-        categoryMap.put("Mens T-Shirts", "admin");
-        categoryMap.put("Smartphones", "admin");
-        categoryMap.put("Apparel", "admin");
-        categoryMap.put("Home Appliances", "admin");
-        categoryMap.put("Toys", "admin");
-        categoryMap.put("Furniture", "admin");
-        categoryMap.put("Books", "admin");
-        categoryMap.put("Sports Equipment", "admin");
-        categoryMap.put("Beauty Products", "admin");
-        categoryMap.put("Automotive", "admin");
-        categoryMap.put("Outdoor Gear", "admin");
-        categoryMap.put("Electronics", "admin");
-        categoryMap.put("Kitchen Appliances", "admin");
-        categoryMap.put("Baby Products", "admin");
-        categoryMap.put("Health & Fitness", "admin");
-        categoryMap.put("Garden & Outdoor", "admin");
-        categoryMap.put("Pet Supplies", "admin");
-        categoryMap.put("Office Supplies", "admin");
-        categoryMap.put("Jewelry & Watches", "admin");
-        categoryMap.put("Travel & Luggage", "admin");
-        categoryMap.put("Musical Instruments", "admin");
-        categoryMap.put("Crafts & Hobbies", "admin");
-        categoryMap.put("Collectibles & Memorabilia", "admin");
-        categoryMap.put("Art & Decor", "admin");
-        categoryMap.put("Food & Beverages", "admin");
-        categoryMap.put("Stationery & Gift Wrapping", "admin");
-        categoryMap.put("Electrical & Lighting", "admin");
-        categoryMap.put("DIY & Tools", "admin");
-        categoryMap.put("Party Supplies", "admin");
-        categoryMap.put("Educational Toys", "admin");
-
-        categoryMap.forEach((categoryName, updateUser) -> {
-            Category category = new Category();
-            category.setCategoryName(categoryName);
-            category.setUpdateUser(updateUser);
-            categoryRepository.save(category);
-        });
-
-        return "success";
+    public boolean existsByCategoryId(String categoryId) {
+        return categoryRepository.existsByCategoryId(categoryId);
     }
 
-    private CategoryDto buildCategoryDto(Category category) {
-        return new CategoryDto(
+    @Override
+    @Transactional
+    public String addDummyCategories() {
+        EcommUser user = authUtil.getLoggedInUser();
+        if (!user.isAdmin()) {
+            throw new ForbiddenOperationException("You are not authorized to perform this action.");
+        }
+
+        List<String> dummyCategories = List.of(
+                "Mens T-Shirts",
+                "Smartphones",
+                "Apparel",
+                "Home Appliances",
+                "Toys",
+                "Furniture",
+                "Books",
+                "Sports Equipment",
+                "Beauty Products",
+                "Automotive",
+                "Outdoor Gear",
+                "Electronics",
+                "Kitchen Appliances",
+                "Baby Products",
+                "Health & Fitness",
+                "Garden & Outdoor",
+                "Pet Supplies",
+                "Office Supplies",
+                "Jewelry & Watches",
+                "Travel & Luggage",
+                "Musical Instruments",
+                "Crafts & Hobbies",
+                "Collectibles & Memorabilia",
+                "Art & Decor",
+                "Food & Beverages",
+                "Stationery & Gift Wrapping",
+                "Electrical & Lighting",
+                "DIY & Tools",
+                "Party Supplies",
+                "Educational Toys"
+        );
+
+        dummyCategories.forEach(categoryName -> {
+            if (!categoryRepository.existsByCategoryName(categoryName)) {
+                Category category = new Category();
+                category.setCategoryName(categoryName);
+                categoryRepository.save(category);
+            }
+        });
+
+        return "Categories inserted safely";
+    }
+
+    private CategoryResponseDTO buildCategoryDto(Category category) {
+        return new CategoryResponseDTO(
                 category.getCategoryId(),
                 category.getCategoryName(),
-                category.getUpdateUser(),
-                category.getUpdateDate()
+                category.getCreatedAt(),
+                category.getUpdatedAt()
         );
     }
 
-    private void validateFields(CategoryDto categoryDto) {
-        String categoryName = categoryDto.getCategoryName();
+    private void validateCategory(String categoryName) {
         if (categoryName == null || categoryName.isBlank()) {
             throw new IllegalArgumentException("categoryName must not be null or blank");
         }
-    }
-
-    private void validateIfAlreadyExists(CategoryDto categoryDto) {
-        String categoryName = categoryDto.getCategoryName();
         if (categoryRepository.existsByCategoryName(categoryName)) {
             throw new ResourceAlreadyExistsException("Category", "categoryName", categoryName);
         }

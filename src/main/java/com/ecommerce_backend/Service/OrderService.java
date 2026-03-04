@@ -1,20 +1,18 @@
 package com.ecommerce_backend.Service;
 
-import com.ecommerce_backend.Payloads.Request.StripePaymentRequestDTO;
-import com.ecommerce_backend.Payloads.Response.OrderDto;
-import com.ecommerce_backend.Payloads.Response.OrderRequestDto;
-import com.stripe.model.PaymentIntent;
+import com.ecommerce_backend.Payloads.Response.OrderResponseDTO;
+import com.ecommerce_backend.Payloads.Response.OrderCaptureRequestDTO;
 
 import java.util.List;
 
 public interface OrderService {
-    OrderDto placeOrder(OrderRequestDto orderRequestDto);
+    OrderResponseDTO placeOrder(OrderCaptureRequestDTO orderCaptureRequestDTO);
 
-    List<OrderDto> getAllOrders();
+    List<OrderResponseDTO> getAllOrders();
 
-    List<OrderDto> getCurrentUserOrders();
+    List<OrderResponseDTO> getCurrentUserOrders();
 
-    OrderDto getCurrentUserOrder(String orderNumber);
+    OrderResponseDTO getCurrentUserOrder(String orderNumber);
 
-    OrderDto getOrder(String orderNumber);
+    OrderResponseDTO getOrder(String orderNumber);
 }

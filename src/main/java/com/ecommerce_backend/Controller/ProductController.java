@@ -25,7 +25,7 @@ public class ProductController {
 
     @PostMapping("/users/categories/{categoryId}/product")
     public ResponseEntity<ProductResponseDTO> addProduct(@RequestBody ProductRequestDTO productRequestDTO,
-                                                         @PathVariable Long categoryId) {
+                                                         @PathVariable String categoryId) {
         ProductResponseDTO savedProductResponseDTO = productService.addProduct(categoryId, productRequestDTO);
         return new ResponseEntity<>(savedProductResponseDTO, HttpStatus.CREATED);
     }
@@ -42,27 +42,27 @@ public class ProductController {
     }
 
     @GetMapping("/public/products/{productId}")
-    public ResponseEntity<ProductResponseDTO> getProduct(@PathVariable Long productId) {
+    public ResponseEntity<ProductResponseDTO> getProduct(@PathVariable String productId) {
         ProductResponseDTO productResponseDTO = productService.getProduct(productId);
         return new ResponseEntity<>(productResponseDTO, HttpStatus.OK);
     }
 
     @PutMapping("/users/products/{productId}")
-    public ResponseEntity<ProductResponseDTO> updateProduct(@PathVariable Long productId,
-                                                            @RequestParam(required = false) Long categoryId,
+    public ResponseEntity<ProductResponseDTO> updateProduct(@PathVariable String productId,
+                                                            @RequestParam(required = false) String categoryId,
                                                             @RequestBody ProductRequestDTO productRequestDTO) {
         ProductResponseDTO updatedProductResponseDTO = productService.updateProduct(productId, categoryId, productRequestDTO);
         return new ResponseEntity<>(updatedProductResponseDTO, HttpStatus.OK);
     }
 
     @DeleteMapping("/users/products/{productId}")
-    public ResponseEntity<String> deleteProduct(@PathVariable Long productId) {
+    public ResponseEntity<String> deleteProduct(@PathVariable String productId) {
         productService.deleteProduct(productId);
         return new ResponseEntity<>("Product deleted successfully", HttpStatus.OK);
     }
 
     @PutMapping("/users/products/{productId}/uploadImage")
-    public ResponseEntity<ProductResponseDTO> uploadProductImage(@PathVariable Long productId,
+    public ResponseEntity<ProductResponseDTO> uploadProductImage(@PathVariable String productId,
                                                                  @RequestParam("image") MultipartFile image) throws IOException {
         ProductResponseDTO productResponseDTO = productService.uploadProductImage(productId, image);
         return new ResponseEntity<>(productResponseDTO, HttpStatus.OK);

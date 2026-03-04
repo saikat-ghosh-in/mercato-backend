@@ -8,10 +8,10 @@ import com.ecommerce_backend.Payloads.Request.AddressRequestDTO;
 import com.ecommerce_backend.Payloads.Response.AddressResponseDTO;
 import com.ecommerce_backend.Repository.AddressRepository;
 import com.ecommerce_backend.Utils.AuthUtil;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -23,7 +23,7 @@ public class AddressServiceImpl implements AddressService {
     private final AuthUtil authUtil;
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public AddressResponseDTO createAddress(AddressRequestDTO addressRequestDTO) {
         EcommUser currentUser = authUtil.getLoggedInUser();
 
@@ -44,6 +44,7 @@ public class AddressServiceImpl implements AddressService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<AddressResponseDTO> getAllAddresses() {
         List<Address> addresses = addressRepository.findAll();
         return addresses.stream()
@@ -52,12 +53,14 @@ public class AddressServiceImpl implements AddressService {
     }
 
     @Override
-    public AddressResponseDTO getAddress(Long addressId) {
+    @Transactional(readOnly = true)
+    public AddressResponseDTO getAddress(String addressId) {
         Address address = getAddressById(addressId); // throws
         return this.buildAddressResponseDTO(address);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<AddressResponseDTO> getUserAddresses() {
         EcommUser currentUser = authUtil.getLoggedInUser();
         List<Address> addresses = currentUser.getAddresses();
@@ -68,14 +71,14 @@ public class AddressServiceImpl implements AddressService {
 
     @Override
     @Transactional
-    public AddressResponseDTO updateAddress(Long addressId, AddressRequestDTO addressRequestDTO) {
+    public AddressResponseDTO updateAddress(String addressId, AddressRequestDTO addressRequestDTO) {
         Address address = getAddressById(addressId);
         EcommUser currentUser = authUtil.getLoggedInUser();
 
         if (address.getUser() == null) {
             throw new IllegalStateException("Address is not associated with any user");
         }
-        if (!address.getUser().getUserId().equals(currentUser.getUserId())) {
+        if (!address.getUser().getId().equals(currentUser.getId())) {
             throw new AccessDeniedException("You cannot update this address");
         }
 
@@ -93,14 +96,14 @@ public class AddressServiceImpl implements AddressService {
 
     @Override
     @Transactional
-    public void deleteAddress(Long addressId) {
+    public void deleteAddress(String addressId) {
         Address address = getAddressById(addressId);
         EcommUser currentUser = authUtil.getLoggedInUser();
 
         if (address.getUser() == null) {
             throw new IllegalStateException("Address is not associated with any user");
         }
-        if (!address.getUser().getUserId().equals(currentUser.getUserId())) {
+        if (!address.getUser().getId().equals(currentUser.getId())) {
             throw new ForbiddenOperationException("You cannot delete this address");
         }
 
@@ -108,8 +111,8 @@ public class AddressServiceImpl implements AddressService {
     }
 
     @Override
-    public Address getAddressById(Long addressId) {
-        return addressRepository.findById(addressId)
+    public Address getAddressById(String addressId) {
+        return addressRepository.findByAddressId(addressId)
                 .orElseThrow(() -> new ResourceNotFoundException("Address", "addressId", addressId));
     }
 

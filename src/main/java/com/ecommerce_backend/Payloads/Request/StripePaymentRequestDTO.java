@@ -10,6 +10,6 @@ import java.util.Map;
 public class StripePaymentRequestDTO {
     private Long amount;
     private String currency;
-    private Long addressId;
+    private String addressId;
     private Map<String, String> metaData;
 }
