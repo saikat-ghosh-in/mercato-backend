@@ -1,0 +1,42 @@
+package com.mercato.Entity;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+@Entity
+@Table(
+        name = "roles",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = "role_name")
+        }
+)
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Role {
+
+    @Id
+    @GeneratedValue(
+            strategy = GenerationType.SEQUENCE,
+            generator = "role_seq"
+    )
+    @SequenceGenerator(
+            name = "role_seq",
+            sequenceName = "role_seq",
+            initialValue = 20000001,
+            allocationSize = 10
+    )
+    private Integer roleId;
+
+    @ToString.Exclude
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20, name = "role_name")
+    private AppRole roleName;
+
+    public Role(AppRole roleName) {
+        this.roleName = roleName;
+    }
+}
