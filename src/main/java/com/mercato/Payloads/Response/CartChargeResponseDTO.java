@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 @Getter
 @AllArgsConstructor
 public class CartChargeResponseDTO {
-    private ChargeType type;
-    private BigDecimal amount;
-    private String description;
+    private final ChargeType type;
+    private final BigDecimal amount;
+    private final String description;
 }

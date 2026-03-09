@@ -2,20 +2,18 @@ package com.mercato.Payloads.Response;
 
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 
 import java.util.List;
 
-@Data
-@Builder
+@Getter
 @AllArgsConstructor
 public class CategoryResponse {
 
-    private List<CategoryResponseDTO> content;
-    private int pageNumber;
-    private int pageSize;
-    private long totalElements;
-    private int totalPages;
-    private boolean lastPage;
+    private final List<CategoryResponseDTO> content;
+    private final int pageNumber;
+    private final int pageSize;
+    private final long totalElements;
+    private final int totalPages;
+    private final boolean lastPage;
 }

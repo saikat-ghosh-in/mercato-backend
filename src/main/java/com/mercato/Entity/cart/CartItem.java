@@ -10,7 +10,7 @@ import java.math.RoundingMode;
 
 @Entity
 @Table(
-        name = "ecomm_cart_items",
+        name = "cart_items",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_cart_item_cart_product", columnNames = {"cart_fk", "product_fk"})
         },
@@ -63,9 +63,6 @@ public class CartItem {
 
     @Transient
     public BigDecimal getLineTotal() {
-        if (quantity == null) {
-            return BigDecimal.ZERO;
-        }
         return getItemPrice()
                 .multiply(BigDecimal.valueOf(quantity))
                 .setScale(2, RoundingMode.HALF_UP);

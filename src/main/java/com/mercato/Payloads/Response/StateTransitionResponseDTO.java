@@ -8,11 +8,11 @@ import java.time.Instant;
 @Getter
 @AllArgsConstructor
 public class StateTransitionResponseDTO {
-    private String fromStatus;
-    private String toStatus;
-    private String action;
-    private String triggeredBy;
-    private Integer qtyAffected;
-    private String reason;
-    private Instant occurredAt;
+    private final String fromStatus;
+    private final String toStatus;
+    private final String action;
+    private final String triggeredBy;
+    private final Integer qtyAffected;
+    private final String reason;
+    private final Instant occurredAt;
 }

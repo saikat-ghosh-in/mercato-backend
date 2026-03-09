@@ -50,6 +50,7 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
     private final FileService fileService;
     private final AuthUtil authUtil;
+    private final ProductMapper productMapper;
 
     @Override
     @Transactional
@@ -74,7 +75,7 @@ public class ProductServiceImpl implements ProductService {
         product.setSeller(user);
 
         Product savedProduct = productRepository.save(product);
-        return ProductMapper.toDto(savedProduct);
+        return productMapper.toDto(savedProduct);
     }
 
     @Override
@@ -134,17 +135,17 @@ public class ProductServiceImpl implements ProductService {
         }
 
         List<ProductResponseDTO> productResponseDTOList = products.stream()
-                .map(ProductMapper::toDto)
+                .map(productMapper::toDto)
                 .toList();
 
-        return ProductResponse.builder()
-                .content(productResponseDTOList)
-                .pageNumber(productsPage.getNumber())
-                .pageSize(productsPage.getSize())
-                .totalElements(productsPage.getTotalElements())
-                .totalPages(productsPage.getTotalPages())
-                .lastPage(productsPage.isLast())
-                .build();
+        return new ProductResponse(
+                productResponseDTOList,
+                productsPage.getNumber(),
+                productsPage.getSize(),
+                productsPage.getTotalElements(),
+                productsPage.getTotalPages(),
+                productsPage.isLast()
+        );
     }
 
     @Override
@@ -154,7 +155,7 @@ public class ProductServiceImpl implements ProductService {
             throw new IllegalArgumentException("productId must not be null!");
         Product product = productRepository.findByProductId(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
-        return ProductMapper.toDto(product);
+        return productMapper.toDto(product);
     }
 
     @Override
@@ -184,7 +185,7 @@ public class ProductServiceImpl implements ProductService {
         product.setDiscountPercent(productRequestDTO.getDiscountPercent());
 
         Product savedProduct = productRepository.save(product);
-        return ProductMapper.toDto(savedProduct);
+        return productMapper.toDto(savedProduct);
     }
 
     @Override
@@ -220,7 +221,7 @@ public class ProductServiceImpl implements ProductService {
         product.setImagePath(imageFilePath);
 
         Product savedProduct = productRepository.save(product);
-        return ProductMapper.toDto(savedProduct);
+        return productMapper.toDto(savedProduct);
     }
 
     @Override
@@ -239,12 +240,8 @@ public class ProductServiceImpl implements ProductService {
         List<ProductSupplyUpdateResponseDTO> responses = new ArrayList<>();
 
         productSupplyUpdateRequestDTOs.forEach(dto -> {
-            ProductSupplyUpdateResponseDTO response = ProductSupplyUpdateResponseDTO.builder()
-                    .productId(dto.getProductId())
-                    .supplyType(dto.getSupplyType())
-                    .quantity(dto.getQuantity())
-                    .error(false)
-                    .build();
+            boolean isError = false;
+            String errorMessage = null;
             try {
                 Product product = getProductByIdForUpdate(dto.getProductId());
                 if (SupplyType.ABSOLUTE.equals(dto.getSupplyType())) {
@@ -254,10 +251,17 @@ public class ProductServiceImpl implements ProductService {
                 }
                 productRepository.save(product);
             } catch (Exception ex) {
-                response.setError(true);
-                response.setErrorMessage(ex.getMessage());
+                isError = true;
+                errorMessage = ex.getMessage();
             } finally {
-                responses.add(response);
+                responses.add(
+                        new ProductSupplyUpdateResponseDTO(
+                                dto.getProductId(),
+                                dto.getSupplyType(),
+                                dto.getQuantity(),
+                                isError,
+                                errorMessage)
+                );
             }
         });
 

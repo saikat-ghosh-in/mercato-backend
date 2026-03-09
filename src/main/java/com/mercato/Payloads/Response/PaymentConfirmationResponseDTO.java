@@ -1,21 +1,17 @@
 package com.mercato.Payloads.Response;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.Getter;
 
 import java.math.BigDecimal;
 
-@Data
+@Getter
 @AllArgsConstructor
-@NoArgsConstructor
-@Builder
 public class PaymentConfirmationResponseDTO {
-    private boolean success;
-    private String message;
-    private String orderId;
-    private BigDecimal amount;
-    private String paymentStatus;
-    private String pgPaymentId;
+    private final boolean success;
+    private final String message;
+    private final String orderId;
+    private final BigDecimal amount;
+    private final String paymentStatus;
+    private final String pgPaymentId;
 }

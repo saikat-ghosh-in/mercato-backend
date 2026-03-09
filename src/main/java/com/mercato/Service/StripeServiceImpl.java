@@ -115,14 +115,14 @@ public class StripeServiceImpl implements StripeService {
         orderReservationService.reserveForOrder(order);
         orderRepository.save(order);
 
-        return PaymentConfirmationResponseDTO.builder()
-                .success(true)
-                .message("Payment confirmation successful")
-                .orderId(order.getOrderId())
-                .amount(order.getTotalAmount())
-                .paymentStatus("completed")
-                .pgPaymentId(payment.getGatewayReference())
-                .build();
+        return new PaymentConfirmationResponseDTO(
+                true,
+                "Payment confirmation successful",
+                order.getOrderId(),
+                order.getTotalAmount(),
+                "completed",
+                payment.getGatewayReference()
+        );
     }
 
     private void updatePayment(Payment payment,

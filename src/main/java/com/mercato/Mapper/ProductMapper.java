@@ -3,16 +3,18 @@ package com.mercato.Mapper;
 import com.mercato.Entity.Product;
 import com.mercato.Payloads.Response.ProductResponseDTO;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
+@Component
 public class ProductMapper {
 
     @Value("${images.base.url}")
-    private static String imageBaseUrl;
+    private String imageBaseUrl;
 
     @Value("${images.products.placeholder.url}")
-    private static String placeholderImageUrl;
+    private String placeholderImageUrl;
 
-    public static ProductResponseDTO toDto(Product product) {
+    public ProductResponseDTO toDto(Product product) {
         return new ProductResponseDTO(
                 product.getProductId(),
                 product.getProductName(),
@@ -33,7 +35,7 @@ public class ProductMapper {
         );
     }
 
-    private static String constructImageUrl(String imagePath) {
+    private String constructImageUrl(String imagePath) {
         if (imagePath == null || imagePath.isEmpty() || imagePath.equals(placeholderImageUrl))
             return placeholderImageUrl;
         return imageBaseUrl.endsWith("/")

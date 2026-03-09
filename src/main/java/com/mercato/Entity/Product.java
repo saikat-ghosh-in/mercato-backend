@@ -22,7 +22,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(
-        name = "ecomm_products",
+        name = "products",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_product_product_id", columnNames = "product_id")
         },

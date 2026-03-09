@@ -1,11 +1,11 @@
 package com.mercato.Payloads.Request;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@Getter
-@AllArgsConstructor
+@Data
+@NoArgsConstructor
 public class CartItemRequestDTO {
-    private final String productId;
-    private final Integer quantity;
+    private String productId;
+    private Integer quantity;
 }

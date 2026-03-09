@@ -1,11 +1,11 @@
 package com.mercato.Payloads.Request;
 
 import com.mercato.Entity.SupplyType;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@Getter
-@AllArgsConstructor
+@Data
+@NoArgsConstructor
 public class ProductSupplyUpdateRequestDTO {
     private String productId;
     private SupplyType supplyType;

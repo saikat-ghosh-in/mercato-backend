@@ -60,14 +60,14 @@ public class CategoryServiceImpl implements CategoryService {
                 .map(CategoryMapper::toDto)
                 .toList();
 
-        return CategoryResponse.builder()
-                .content(categoryResponseDTOList)
-                .pageNumber(categoryPage.getNumber())
-                .pageSize(categoryPage.getSize())
-                .totalElements(categoryPage.getTotalElements())
-                .totalPages(categoryPage.getTotalPages())
-                .lastPage(categoryPage.isLast())
-                .build();
+        return new CategoryResponse(
+                categoryResponseDTOList,
+                categoryPage.getNumber(),
+                categoryPage.getSize(),
+                categoryPage.getTotalElements(),
+                categoryPage.getTotalPages(),
+                categoryPage.isLast()
+        );
     }
 
     @Override
@@ -168,7 +168,7 @@ public class CategoryServiceImpl implements CategoryService {
 
         return "Categories inserted safely";
     }
-    
+
 
     private void validateCategory(String categoryName) {
         if (categoryName == null || categoryName.isBlank()) {

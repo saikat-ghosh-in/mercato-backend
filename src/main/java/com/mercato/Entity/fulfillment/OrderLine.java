@@ -13,7 +13,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 @Builder
@@ -98,6 +97,7 @@ public class OrderLine {
 
     @OneToMany(mappedBy = "orderLine", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("occurredAt DESC")
+    @Builder.Default
     private List<StateTransition> stateTransitions = new ArrayList<>();
 
     @CreationTimestamp

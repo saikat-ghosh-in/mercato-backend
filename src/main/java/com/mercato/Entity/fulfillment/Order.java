@@ -17,7 +17,7 @@ import java.util.UUID;
 
 @Entity
 @Table(
-        name = "ecomm_order_snapshot",
+        name = "order_snapshot",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_order_order_id", columnNames = "order_id"),
                 @UniqueConstraint(name = "uk_order_payment_fk", columnNames = "payment_fk")

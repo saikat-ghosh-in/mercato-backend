@@ -10,37 +10,37 @@ import java.util.List;
 @Getter
 @AllArgsConstructor
 public class OrderLineResponseDTO {
-    private String orderId;
-    private int orderLineNumber;
-    private String orderLineStatus;
+    private final String orderId;
+    private final int orderLineNumber;
+    private final String orderLineStatus;
 
-    private ProductDetails product;
-    private Seller seller;
+    private final ProductDetails product;
+    private final Seller seller;
 
-    private int orderedQty;
-    private int acceptedQty;
-    private int shippedQty;
-    private int cancelledQty;
-    private int pendingQty;
+    private final int orderedQty;
+    private final int acceptedQty;
+    private final int shippedQty;
+    private final int cancelledQty;
+    private final int pendingQty;
 
-    private BigDecimal lineTotal;
-    private List<StateTransitionResponseDTO> stateTransitions;
+    private final BigDecimal lineTotal;
+    private final List<StateTransitionResponseDTO> stateTransitions;
 
-    private Instant createdAt;
-    private Instant updatedAt;
+    private final Instant createdAt;
+    private final Instant updatedAt;
 
     @Getter
     @AllArgsConstructor
     public static class ProductDetails {
-        private String productId;
-        private String productName;
-        private BigDecimal unitPrice;
+        private final String productId;
+        private final String productName;
+        private final BigDecimal unitPrice;
     }
 
     @Getter
     @AllArgsConstructor
     public static class Seller {
-        private String name;
-        private String email;
+        private final String name;
+        private final String email;
     }
 }

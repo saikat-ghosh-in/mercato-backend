@@ -9,11 +9,11 @@ import java.time.Instant;
 @Getter
 @AllArgsConstructor
 public class RefundResponseDTO {
-    private String gatewayReference;
-    private BigDecimal amount;
-    private String currency;
-    private String status;
-    private String reason;
-    private String failureReason;
-    private Instant createdAt;
+    private final String gatewayReference;
+    private final BigDecimal amount;
+    private final String currency;
+    private final String status;
+    private final String reason;
+    private final String failureReason;
+    private final Instant createdAt;
 }

@@ -1,10 +1,10 @@
 package com.mercato.Payloads.Request;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@Getter
-@AllArgsConstructor
+@Data
+@NoArgsConstructor
 public class AddressRequestDTO {
     private String recipientName;
     private String recipientPhone;

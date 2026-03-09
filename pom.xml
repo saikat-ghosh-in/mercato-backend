@@ -11,8 +11,8 @@
     <groupId>com.example</groupId>
     <artifactId>mercato-backend</artifactId>
     <version>v0.0.1-SNAPSHOT</version>
-    <name>ecommerce-backend</name>
-    <description>project for ecommerce-backend using Java spring boot</description>
+    <name>mercato-backend</name>
+    <description>project for mercato-backend using Java spring boot</description>
     <url/>
     <licenses>
         <license/>

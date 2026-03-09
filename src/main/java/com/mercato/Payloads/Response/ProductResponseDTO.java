@@ -1,12 +1,12 @@
 package com.mercato.Payloads.Response;
 
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 
-@Data
+@Getter
 @AllArgsConstructor
 public class ProductResponseDTO {
     private final String productId;

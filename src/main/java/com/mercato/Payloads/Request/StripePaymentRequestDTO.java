@@ -1,12 +1,12 @@
 package com.mercato.Payloads.Request;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.Map;
 
-@Getter
-@AllArgsConstructor
+@Data
+@NoArgsConstructor
 public class StripePaymentRequestDTO {
     private Long amount;
     private String currency;

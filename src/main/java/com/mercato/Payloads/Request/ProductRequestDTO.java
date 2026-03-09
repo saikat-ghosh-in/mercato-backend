@@ -1,18 +1,18 @@
 package com.mercato.Payloads.Request;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
-@Getter
-@AllArgsConstructor
+@Data
+@NoArgsConstructor
 public class ProductRequestDTO {
-    private final String productName;
-    private final boolean active;
-    private final String imageUrl;
-    private final String description;
-    private final Integer quantity;
-    private final BigDecimal retailPrice;
-    private final BigDecimal discountPercent;
+    private String productName;
+    private boolean active;
+    private String imageUrl;
+    private String description;
+    private Integer quantity;
+    private BigDecimal retailPrice;
+    private BigDecimal discountPercent;
 }

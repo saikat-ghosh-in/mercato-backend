@@ -16,7 +16,7 @@ import java.util.UUID;
 @Data
 @Entity
 @Table(
-        name = "ecomm_categories",
+        name = "categories",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_category_category_id", columnNames = "category_id")
         }

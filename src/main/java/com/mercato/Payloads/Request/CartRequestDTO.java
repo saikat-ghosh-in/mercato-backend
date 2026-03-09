@@ -1,12 +1,12 @@
 package com.mercato.Payloads.Request;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-@Getter
-@AllArgsConstructor
+@Data
+@NoArgsConstructor
 public class CartRequestDTO {
-    private final List<CartItemRequestDTO> cartItems;
+    private List<CartItemRequestDTO> cartItems;
 }

@@ -2,11 +2,11 @@ package com.mercato.Payloads.Request;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@Getter
-@AllArgsConstructor
+@Data
+@NoArgsConstructor
 public class OrderCaptureRequestDTO {
 
     @NotNull(message = "addressId is required")

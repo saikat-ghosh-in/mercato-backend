@@ -8,7 +8,7 @@ import java.time.Instant;
 
 @Entity
 @Table(
-        name = "ecomm_order_line_state_transitions",
+        name = "order_line_state_transitions",
         indexes = {
                 @Index(name = "idx_transition_order_line", columnList = "order_line_fk"),
                 @Index(name = "idx_transition_occurred_at", columnList = "occurred_at")

@@ -1,15 +1,15 @@
 package com.mercato.Payloads.Response;
 
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 
 import java.time.Instant;
 
-@Data
+@Getter
 @AllArgsConstructor
 public class CategoryResponseDTO {
-    private String categoryId;
-    private String categoryName;
-    private Instant createdAt;
-    private Instant updatedAt;
+    private final String categoryId;
+    private final String categoryName;
+    private final Instant createdAt;
+    private final Instant updatedAt;
 }

@@ -10,14 +10,11 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Entity
 @Table(
-        name = "ecomm_carts",
+        name = "carts",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_cart_cart_id", columnNames = "cart_id"),
                 @UniqueConstraint(name = "uk_cart_guest_token", columnNames = "guest_token")
@@ -59,7 +56,7 @@ public class Cart {
             orphanRemoval = true
     )
     @Builder.Default
-    private List<CartCharge> charges = new ArrayList<>();
+    private Set<CartCharge> charges = new HashSet<>();
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

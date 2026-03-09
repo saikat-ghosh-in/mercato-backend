@@ -16,7 +16,7 @@ import static jakarta.persistence.CascadeType.*;
 
 @Entity
 @Table(
-        name = "ecomm_users",
+        name = "users",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_user_username", columnNames = "username"),
                 @UniqueConstraint(name = "uk_user_email", columnNames = "email"),

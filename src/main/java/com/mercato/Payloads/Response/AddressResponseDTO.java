@@ -6,15 +6,15 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public class AddressResponseDTO {
-    private String addressId;
-    private String userId;
-    private String userName;
-    private String recipientName;
-    private String recipientPhone;
-    private String addressLine1;
-    private String addressLine2;
-    private String city;
-    private String state;
-    private String pincode;
-    private String country;
+    private final String addressId;
+    private final String userId;
+    private final String userName;
+    private final String recipientName;
+    private final String recipientPhone;
+    private final String addressLine1;
+    private final String addressLine2;
+    private final String city;
+    private final String state;
+    private final String pincode;
+    private final String country;
 }

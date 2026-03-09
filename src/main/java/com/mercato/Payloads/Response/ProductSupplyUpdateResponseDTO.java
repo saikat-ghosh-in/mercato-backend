@@ -1,16 +1,16 @@
 package com.mercato.Payloads.Response;
 
 import com.mercato.Entity.SupplyType;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
-@Data
-@Builder
-@NoArgsConstructor
+
+@Getter
 @AllArgsConstructor
 public class ProductSupplyUpdateResponseDTO {
-    private String productId;
-    private SupplyType supplyType;
-    private int quantity;
-    private boolean error;
-    private String errorMessage;
+    private final String productId;
+    private final SupplyType supplyType;
+    private final int quantity;
+    private final boolean error;
+    private final String errorMessage;
 }

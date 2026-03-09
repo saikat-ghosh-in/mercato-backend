@@ -4,8 +4,10 @@ import com.mercato.Entity.fulfillment.OrderLineAction;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
 public class OrderLineUpdateRequestDTO {
 
     @NotBlank(message = "Fulfillment ID is required")
