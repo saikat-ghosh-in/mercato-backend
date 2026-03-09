@@ -14,8 +14,6 @@ import java.util.Optional;
 @Repository
 public interface OrderLineRepository extends JpaRepository<OrderLine, Long> {
 
-    List<OrderLine> findAllByOrder_OrderId(String orderId);
-
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             SELECT ol FROM OrderLine ol
@@ -24,16 +22,28 @@ public interface OrderLineRepository extends JpaRepository<OrderLine, Long> {
             WHERE ol.fulfillmentId = :fulfillmentId
             AND ol.orderLineNumber = :orderLineNumber
             """)
-    Optional<OrderLine> findByFulfillmentIdAndOrderLineNumberForUpdate(@Param("fulfillmentId") String fulfillmentId,
-                                                                       @Param("orderLineNumber") int orderLineNumber
+    Optional<OrderLine> findByFulfillmentIdAndOrderLineNumberForUpdate(
+            @Param("fulfillmentId") String fulfillmentId,
+            @Param("orderLineNumber") int orderLineNumber
     );
 
     @Query("""
             SELECT ol FROM OrderLine ol
-            WHERE ol.fulfillmentId = :fulfillmentId
-            AND ol.orderLineNumber = :orderLineNumber
+            LEFT JOIN FETCH ol.stateTransitions
+            LEFT JOIN FETCH ol.order
+            WHERE ol.sellerEmail = :sellerEmail
             """)
-    Optional<OrderLine> findByFulfillmentIdAndOrderLineNumber(@Param("fulfillmentId") String fulfillmentId,
-                                                              @Param("orderLineNumber") int orderLineNumber
+    List<OrderLine> findAllBySellerEmail(@Param("sellerEmail") String sellerEmail);
+
+    @Query("""
+            SELECT ol FROM OrderLine ol
+            LEFT JOIN FETCH ol.stateTransitions
+            LEFT JOIN FETCH ol.order
+            WHERE ol.fulfillmentId = :fulfillmentId
+            AND ol.sellerEmail = :sellerEmail
+            """)
+    List<OrderLine> findAllByFulfillmentIdAndSellerEmail(
+            @Param("fulfillmentId") String fulfillmentId,
+            @Param("sellerEmail") String sellerEmail
     );
 }

@@ -35,7 +35,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             WHERE o.orderId = :orderId
             AND o.customerEmail = :email
             """)
-    Optional<Order> findByOrderIdAndCustomerEmailWithLines(@Param("orderId") String orderId,
-                                                           @Param("email") String email
+    Optional<Order> findByOrderIdAndCustomerEmailWithLines(
+            @Param("orderId") String orderId,
+            @Param("email") String email
     );
 }

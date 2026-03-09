@@ -1,13 +1,16 @@
 package com.mercato.Service;
 
+import com.mercato.Entity.EcommUser;
 import com.mercato.Entity.fulfillment.*;
 import com.mercato.ExceptionHandler.CustomBadRequestException;
+import com.mercato.ExceptionHandler.ForbiddenOperationException;
 import com.mercato.ExceptionHandler.ResourceNotFoundException;
 import com.mercato.Mapper.OrderLineMapper;
 import com.mercato.Payloads.Request.OrderLineUpdateRequestDTO;
 import com.mercato.Payloads.Response.OrderLineResponseDTO;
 import com.mercato.Repository.OrderLineRepository;
 import com.mercato.Repository.OrderRepository;
+import com.mercato.Utils.AuthUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,17 +26,11 @@ public class OrderLineUpdateServiceImpl implements OrderLineUpdateService {
     private final OrderRepository orderRepository;
     private final OrderReservationService orderReservationService;
     private final RefundService refundService;
+    private final AuthUtil authUtil;
 
     @Override
     @Transactional
     public OrderLineResponseDTO updateOrderLine(OrderLineUpdateRequestDTO request, TransitionTrigger trigger) {
-
-        if (trigger == TransitionTrigger.CUSTOMER
-                && request.getAction() != OrderLineAction.CANCEL) {
-            throw new CustomBadRequestException(
-                    "Customers can only cancel order lines"
-            );
-        }
 
         OrderLine orderLine = orderLineRepository
                 .findByFulfillmentIdAndOrderLineNumberForUpdate(
@@ -43,6 +40,29 @@ public class OrderLineUpdateServiceImpl implements OrderLineUpdateService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "OrderLine", "fulfillmentId", request.getFulfillmentId()
                 ));
+
+        if (trigger == TransitionTrigger.SELLER) {
+            EcommUser seller = authUtil.getLoggedInUser();
+            if (!orderLine.getSellerEmail().equals(seller.getEmail())) {
+                throw new ForbiddenOperationException(
+                        "You are not authorized to update this order line"
+                );
+            }
+        }
+
+        if (trigger == TransitionTrigger.CUSTOMER) {
+            EcommUser customer = authUtil.getLoggedInUser();
+            if (!orderLine.getOrder().getCustomerEmail().equals(customer.getEmail())) {
+                throw new ForbiddenOperationException(
+                        "You are not authorized to update this order line"
+                );
+            }
+            if (request.getAction() != OrderLineAction.CANCEL) {
+                throw new CustomBadRequestException(
+                        "Customers can only cancel order lines"
+                );
+            }
+        }
 
         if (orderLine.isTerminal()) {
             throw new CustomBadRequestException(

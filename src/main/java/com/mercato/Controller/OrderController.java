@@ -2,11 +2,13 @@ package com.mercato.Controller;
 
 import com.mercato.Entity.fulfillment.TransitionTrigger;
 import com.mercato.Payloads.Request.*;
+import com.mercato.Payloads.Response.FulfillmentOrderResponseDTO;
 import com.mercato.Payloads.Response.OrderLineResponseDTO;
 import com.mercato.Payloads.Response.OrderResponseDTO;
 import com.mercato.Payloads.Response.PaymentConfirmationResponseDTO;
 import com.mercato.Service.OrderLineUpdateService;
 import com.mercato.Service.OrderService;
+import com.mercato.Service.SellerService;
 import com.mercato.Service.StripeService;
 import com.mercato.Utils.AuthUtil;
 import com.stripe.exception.StripeException;
@@ -27,6 +29,7 @@ public class OrderController {
     private final OrderService orderService;
     private final StripeService stripeService;
     private final OrderLineUpdateService orderLineUpdateService;
+    private final SellerService sellerService;
     private final AuthUtil authUtil;
 
     @PostMapping("/users/orders/capture")
@@ -89,5 +92,15 @@ public class OrderController {
     public ResponseEntity<OrderResponseDTO> cancelOrder(@RequestBody @Valid OrderCancelRequestDTO request) {
         OrderResponseDTO response = orderService.cancelOrder(request);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/seller/fulfillment-orders")
+    public ResponseEntity<List<FulfillmentOrderResponseDTO>> getAllFulfillmentOrders() {
+        return ResponseEntity.ok(sellerService.getAllFulfillmentOrders());
+    }
+
+    @GetMapping("/seller/fulfillment-orders/{fulfillmentId}")
+    public ResponseEntity<FulfillmentOrderResponseDTO> getFulfillmentOrder(@PathVariable String fulfillmentId) {
+        return ResponseEntity.ok(sellerService.getFulfillmentOrder(fulfillmentId));
     }
 }
