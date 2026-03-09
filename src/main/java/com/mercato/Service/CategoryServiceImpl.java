@@ -6,6 +6,7 @@ import com.mercato.Entity.EcommUser;
 import com.mercato.ExceptionHandler.ForbiddenOperationException;
 import com.mercato.ExceptionHandler.ResourceAlreadyExistsException;
 import com.mercato.ExceptionHandler.ResourceNotFoundException;
+import com.mercato.Mapper.CategoryMapper;
 import com.mercato.Payloads.Request.CategoryRequestDTO;
 import com.mercato.Payloads.Response.CategoryResponseDTO;
 import com.mercato.Payloads.Response.CategoryResponse;
@@ -40,7 +41,7 @@ public class CategoryServiceImpl implements CategoryService {
         category.setCategoryName(categoryName);
 
         Category savedCategory = categoryRepository.save(category);
-        return buildCategoryDto(savedCategory);
+        return CategoryMapper.toDto(savedCategory);
     }
 
     @Override
@@ -56,7 +57,7 @@ public class CategoryServiceImpl implements CategoryService {
         Page<Category> categoryPage = categoryRepository.findAll(pageDetails);
         List<Category> categories = categoryPage.getContent();
         List<CategoryResponseDTO> categoryResponseDTOList = categories.stream()
-                .map(this::buildCategoryDto)
+                .map(CategoryMapper::toDto)
                 .toList();
 
         return CategoryResponse.builder()
@@ -73,7 +74,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional(readOnly = true)
     public CategoryResponseDTO getCategory(String categoryId) {
         Category category = this.getCategoryByCategoryId(categoryId);
-        return buildCategoryDto(category);
+        return CategoryMapper.toDto(category);
     }
 
     @Override
@@ -86,7 +87,7 @@ public class CategoryServiceImpl implements CategoryService {
         category.setCategoryName(categoryName);
 
         Category savedCategory = categoryRepository.save(category);
-        return buildCategoryDto(savedCategory);
+        return CategoryMapper.toDto(savedCategory);
     }
 
     @Override
@@ -167,15 +168,7 @@ public class CategoryServiceImpl implements CategoryService {
 
         return "Categories inserted safely";
     }
-
-    private CategoryResponseDTO buildCategoryDto(Category category) {
-        return new CategoryResponseDTO(
-                category.getCategoryId(),
-                category.getCategoryName(),
-                category.getCreatedAt(),
-                category.getUpdatedAt()
-        );
-    }
+    
 
     private void validateCategory(String categoryName) {
         if (categoryName == null || categoryName.isBlank()) {

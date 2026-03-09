@@ -9,11 +9,13 @@ import com.mercato.ExceptionHandler.ResourceNotFoundException;
 import com.mercato.Repository.OrderReservationRepository;
 import com.mercato.Repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OrderReservationServiceImpl implements OrderReservationService {
 
     private final OrderReservationRepository orderReservationRepository;
@@ -23,6 +25,12 @@ public class OrderReservationServiceImpl implements OrderReservationService {
     @Transactional
     public void reserveForOrder(Order order) {
         order.getOrderLines().forEach(orderLine -> {
+
+            if (orderReservationRepository.findByOrderLine_Id(orderLine.getId()).isPresent()) {
+                log.warn("Order reservation already exists for orderLine: {}", orderLine.getId());
+                return;
+            }
+
             Product product = productRepository.findByProductId(orderLine.getProductId())
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Product", "productId", orderLine.getProductId()

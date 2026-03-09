@@ -1,0 +1,33 @@
+package com.mercato.Mapper;
+
+import com.mercato.Entity.EcommUser;
+import com.mercato.Payloads.Response.EcommUserResponseDTO;
+
+import java.util.List;
+
+public class EcommUserMapper {
+
+    public static EcommUserResponseDTO toDto(EcommUser user) {
+        List<String> roles = user.getRoles().stream()
+                .map(role -> role.getRoleName().name())
+                .toList();
+
+        return new EcommUserResponseDTO(
+                user.getUserId(),
+                user.getUsername(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getEmail(),
+                user.getPhoneNumber(),
+                user.getProfileImageUrl(),
+                user.isEnabled(),
+                user.isAccountLocked(),
+                user.isEmailVerified(),
+                user.getCreatedAt(),
+                user.getLastLoginAt(),
+                user.isSeller(),
+                user.getSellerDisplayName(),
+                roles
+        );
+    }
+}

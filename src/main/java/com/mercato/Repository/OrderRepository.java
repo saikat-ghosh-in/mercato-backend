@@ -22,14 +22,16 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     @Query("""
             SELECT o FROM Order o
-            LEFT JOIN FETCH o.orderLines
+            LEFT JOIN FETCH o.orderLines ol
+            LEFT JOIN FETCH ol.stateTransitions
             WHERE o.customerEmail = :email
             """)
     List<Order> findAllByCustomerEmailWithLines(String email);
 
     @Query("""
             SELECT o FROM Order o
-            LEFT JOIN FETCH o.orderLines
+            LEFT JOIN FETCH o.orderLines ol
+            LEFT JOIN FETCH ol.stateTransitions
             WHERE o.orderId = :orderId
             AND o.customerEmail = :email
             """)

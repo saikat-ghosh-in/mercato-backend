@@ -29,28 +29,27 @@ public class JwtUtils {
     private String jwtSecret;
 
     @Value("${spring.app.jwtExpirationMs}")
-    private int jwtExpirationMs;
+    private long jwtExpirationMs;
 
     @Value("${spring.app.jwtCookieName}")
     private String jwtCookieName;
+
+    private static final String GUEST_TOKEN_COOKIE = "guest_token";
+    private static final long GUEST_TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
     private Key key() {
         return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
     }
 
-    public String generateTokenFromUsername(String username) {
-        return Jwts.builder()
-                .subject(username)
+    public ResponseCookie generateJwtCookie(UserDetailsImpl userPrincipal) {
+        String jwt = Jwts.builder()
+                .subject(userPrincipal.getUsername())
                 .issuedAt(new Date())
                 .expiration(new Date((new Date()).getTime() + jwtExpirationMs))
                 .signWith(key())
                 .compact();
-    }
-
-    public ResponseCookie generateJwtCookie(UserDetailsImpl userPrincipal) {
-        String jwt = generateTokenFromUsername(userPrincipal.getUsername());
         return ResponseCookie.from(jwtCookieName, jwt)
-                .path("/api")
+                .path("/")
                 .maxAge(jwtExpirationMs / 1000)
                 .httpOnly(true)
                 .secure(true)
@@ -58,17 +57,54 @@ public class JwtUtils {
                 .build();
     }
 
-    public String getJwtFromCookie(HttpServletRequest request) {
-        Cookie cookie = WebUtils.getCookie(request, jwtCookieName);
-        if (cookie != null) {
-            return cookie.getValue();
+    public ResponseCookie generateGuestTokenCookie() {
+        String token = Jwts.builder()
+                .subject("guest")
+                .claim("type", "guest")
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + GUEST_TOKEN_MAX_AGE_MS))
+                .signWith(key())
+                .compact();
+        return ResponseCookie.from(GUEST_TOKEN_COOKIE, token)
+                .path("/")
+                .maxAge(GUEST_TOKEN_MAX_AGE_MS / 1000)
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .build();
+    }
+
+    public String extractJwt(HttpServletRequest request) {
+        String header = request.getHeader("Authorization");
+        if (header != null && header.startsWith("Bearer ")) {
+            return header.substring(7);
         }
-        return null;
+        return getJwtFromCookie(request);
+    }
+
+    public static String extractGuestToken(HttpServletRequest request) {
+        Cookie cookie = WebUtils.getCookie(request, GUEST_TOKEN_COOKIE);
+        return cookie != null ? cookie.getValue() : null;
+    }
+
+    private String getJwtFromCookie(HttpServletRequest request) {
+        Cookie cookie = WebUtils.getCookie(request, jwtCookieName);
+        return cookie != null ? cookie.getValue() : null;
     }
 
     public ResponseCookie getCleanJwtCookie() {
         return ResponseCookie.from(jwtCookieName, null)
-                .path("/api")
+                .path("/")
+                .maxAge(0)
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .build();
+    }
+
+    public ResponseCookie getCleanGuestTokenCookie() {
+        return ResponseCookie.from(GUEST_TOKEN_COOKIE, null)
+                .path("/")
                 .maxAge(0)
                 .httpOnly(true)
                 .secure(true)
@@ -116,5 +152,14 @@ public class JwtUtils {
             logger.error("JWT claims string is empty: {}", e.getMessage());
         }
         return false;
+    }
+
+    public String getClaimFromToken(String token, String claimKey) {
+        return Jwts.parser()
+                .verifyWith((SecretKey) key())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .get(claimKey, String.class);
     }
 }

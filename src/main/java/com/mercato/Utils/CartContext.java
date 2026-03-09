@@ -1,6 +1,6 @@
 package com.mercato.Utils;
 
-import com.mercato.Security.jwt.GuestTokenFilter;
+import com.mercato.Security.jwt.JwtUtils;
 import com.mercato.Security.services.UserDetailsImpl;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -19,7 +19,7 @@ public record CartContext(String userId, String guestToken) {
             return new CartContext(userDetails.getUserId(), null);
         }
 
-        return new CartContext(null, GuestTokenFilter.extractGuestToken(request));
+        return new CartContext(null, JwtUtils.extractGuestToken(request));
     }
 
     public boolean isGuest() {

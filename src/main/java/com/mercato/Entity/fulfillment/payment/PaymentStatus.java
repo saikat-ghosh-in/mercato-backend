@@ -1,4 +1,4 @@
-package com.mercato.Entity.fulfillment;
+package com.mercato.Entity.fulfillment.payment;
 
 public enum PaymentStatus {
     INITIATED,     // Payment flow started, nothing confirmed yet

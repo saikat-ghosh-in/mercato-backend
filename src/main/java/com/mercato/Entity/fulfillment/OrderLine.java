@@ -56,6 +56,9 @@ public class OrderLine {
     @JoinColumn(name = "order_fk", referencedColumnName = "id", nullable = false)
     private Order order;
 
+    @OneToOne(mappedBy = "orderLine", cascade = CascadeType.ALL, orphanRemoval = true)
+    private OrderReservation orderReservation;
+
     @Column(name = "product_id", nullable = false, updatable = false)
     private String productId;
 

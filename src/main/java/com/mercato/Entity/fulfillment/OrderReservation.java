@@ -11,10 +11,7 @@ import java.time.Instant;
 @Table(
         name = "ecomm_order_reservations",
         uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uk_order_reservation_orderline",
-                        columnNames = "order_line_fk"
-                )
+                @UniqueConstraint(name = "uk_order_reservation_order_line", columnNames = {"order_line_fk"})
         },
         indexes = {
                 @Index(name = "idx_order_reservation_order", columnList = "order_fk"),

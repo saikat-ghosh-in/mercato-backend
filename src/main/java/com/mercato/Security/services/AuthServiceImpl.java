@@ -8,7 +8,6 @@ import com.mercato.ExceptionHandler.ResourceNotFoundException;
 import com.mercato.Payloads.Response.EcommUserResponseDTO;
 import com.mercato.Repository.RoleRepository;
 import com.mercato.Repository.UserRepository;
-import com.mercato.Security.jwt.GuestTokenFilter;
 import com.mercato.Security.jwt.JwtUtils;
 import com.mercato.Security.payloads.LoginRequest;
 import com.mercato.Security.payloads.RegisterUserRequest;
@@ -49,7 +48,6 @@ public class AuthServiceImpl implements AuthService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder encoder;
 
-    @Lazy
     private CartService cartService;
 
     @Autowired
@@ -76,21 +74,13 @@ public class AuthServiceImpl implements AuthService {
         user.setLastLoginAt(Instant.now());
         userRepository.save(user);
 
-        // ── Merge guest cart if present ───────────────────────────
-        String guestToken = GuestTokenFilter.extractGuestToken(request);
+        String guestToken = JwtUtils.extractGuestToken(request);
         if (guestToken != null) {
             cartService.mergeGuestCartOnLogin(userDetails.getUserId(), guestToken);
 
-            ResponseCookie clearGuest = ResponseCookie.from("guest_token", "")
-                    .httpOnly(true)
-                    .secure(true)
-                    .sameSite("None")
-                    .path("/")
-                    .maxAge(0)
-                    .build();
-            httpServletResponse.addHeader(HttpHeaders.SET_COOKIE, clearGuest.toString());
+            ResponseCookie cleanGuestTokenCookie = jwtUtils.getCleanGuestTokenCookie();
+            httpServletResponse.addHeader(HttpHeaders.SET_COOKIE, cleanGuestTokenCookie.toString());
         }
-        // ─────────────────────────────────────────────────────────
 
         ResponseCookie jwtCookie = jwtUtils.generateJwtCookie(userDetails);
         String jwt = jwtCookie.getValue();
@@ -112,8 +102,6 @@ public class AuthServiceImpl implements AuthService {
                 .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
                 .body(response);
     }
-
-    // ── All methods below unchanged ───────────────────────────────────────────
 
     @Override
     @Transactional
@@ -226,10 +214,5 @@ public class AuthServiceImpl implements AuthService {
             throw new ResourceAlreadyExistsException("User", "username", username);
         if (userRepository.existsByEmail(email))
             throw new ResourceAlreadyExistsException("User", "email", email);
-    }
-
-    private Role getRoleByRoleName(AppRole appRole) {
-        return roleRepository.findByRoleName(appRole)
-                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
     }
 }

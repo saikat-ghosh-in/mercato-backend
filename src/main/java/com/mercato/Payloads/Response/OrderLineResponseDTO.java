@@ -5,6 +5,7 @@ import lombok.Getter;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 
 @Getter
 @AllArgsConstructor
@@ -23,6 +24,8 @@ public class OrderLineResponseDTO {
     private int pendingQty;
 
     private BigDecimal lineTotal;
+    private List<StateTransitionResponseDTO> stateTransitions;
+
     private Instant createdAt;
     private Instant updatedAt;
 

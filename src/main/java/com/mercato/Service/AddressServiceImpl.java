@@ -4,6 +4,7 @@ import com.mercato.Entity.Address;
 import com.mercato.Entity.EcommUser;
 import com.mercato.ExceptionHandler.ForbiddenOperationException;
 import com.mercato.ExceptionHandler.ResourceNotFoundException;
+import com.mercato.Mapper.AddressMapper;
 import com.mercato.Payloads.Request.AddressRequestDTO;
 import com.mercato.Payloads.Response.AddressResponseDTO;
 import com.mercato.Repository.AddressRepository;
@@ -40,7 +41,7 @@ public class AddressServiceImpl implements AddressService {
         currentUser.addAddress(newAddress);
 
         Address savedAddress = addressRepository.save(newAddress);
-        return buildAddressResponseDTO(savedAddress);
+        return AddressMapper.toDto(savedAddress);
     }
 
     @Override
@@ -48,7 +49,7 @@ public class AddressServiceImpl implements AddressService {
     public List<AddressResponseDTO> getAllAddresses() {
         List<Address> addresses = addressRepository.findAll();
         return addresses.stream()
-                .map(this::buildAddressResponseDTO)
+                .map(AddressMapper::toDto)
                 .toList();
     }
 
@@ -56,7 +57,7 @@ public class AddressServiceImpl implements AddressService {
     @Transactional(readOnly = true)
     public AddressResponseDTO getAddress(String addressId) {
         Address address = getAddressById(addressId); // throws
-        return this.buildAddressResponseDTO(address);
+        return AddressMapper.toDto(address);
     }
 
     @Override
@@ -65,7 +66,7 @@ public class AddressServiceImpl implements AddressService {
         EcommUser currentUser = authUtil.getLoggedInUser();
         List<Address> addresses = currentUser.getAddresses();
         return addresses.stream()
-                .map(this::buildAddressResponseDTO)
+                .map(AddressMapper::toDto)
                 .toList();
     }
 
@@ -91,7 +92,7 @@ public class AddressServiceImpl implements AddressService {
         address.setPincode(addressRequestDTO.getPincode());
         address.setCountry(addressRequestDTO.getCountry());
 
-        return buildAddressResponseDTO(address);
+        return AddressMapper.toDto(address);
     }
 
     @Override
@@ -114,22 +115,5 @@ public class AddressServiceImpl implements AddressService {
     public Address getAddressById(String addressId) {
         return addressRepository.findByAddressId(addressId)
                 .orElseThrow(() -> new ResourceNotFoundException("Address", "addressId", addressId));
-    }
-
-    @Override
-    public AddressResponseDTO buildAddressResponseDTO(Address address) {
-        return new AddressResponseDTO(
-                address.getAddressId(),
-                address.getUser().getUserId(),
-                address.getUser().getUsername(),
-                address.getRecipientName(),
-                address.getRecipientPhone(),
-                address.getAddressLine1(),
-                address.getAddressLine2(),
-                address.getCity(),
-                address.getState(),
-                address.getPincode(),
-                address.getCountry()
-        );
     }
 }

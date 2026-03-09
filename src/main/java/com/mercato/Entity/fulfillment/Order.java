@@ -1,5 +1,7 @@
 package com.mercato.Entity.fulfillment;
 
+import com.mercato.Entity.fulfillment.payment.Payment;
+import com.mercato.Entity.fulfillment.payment.PaymentStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 import lombok.*;

@@ -1,0 +1,43 @@
+package com.mercato.Mapper;
+
+import com.mercato.Entity.fulfillment.Order;
+import com.mercato.Payloads.Response.OrderLineResponseDTO;
+import com.mercato.Payloads.Response.OrderResponseDTO;
+
+import java.util.List;
+
+public class OrderMapper {
+
+    public static OrderResponseDTO toDto(Order order) {
+        List<OrderLineResponseDTO> orderLineDTOs = order.getOrderLines().stream()
+                .map(OrderLineMapper::toDto)
+                .toList();
+
+        return new OrderResponseDTO(
+                order.getOrderId(),
+                order.getOrderStatus().toString(),
+                new OrderResponseDTO.Customer(
+                        order.getCustomerName(),
+                        order.getCustomerEmail()
+                ),
+                new OrderResponseDTO.DeliveryAddress(
+                        order.getRecipientName(),
+                        order.getRecipientPhone(),
+                        order.getDeliveryAddressLine1(),
+                        order.getDeliveryAddressLine2(),
+                        order.getDeliveryCity(),
+                        order.getDeliveryState(),
+                        order.getDeliveryPincode()
+                ),
+                PaymentMapper.toDto(order.getPayment()),
+                RefundMapper.toDto(order.getPayment().getRefund()),
+                orderLineDTOs,
+                order.getCurrency(),
+                order.getSubtotal(),
+                order.getCharges(),
+                order.getTotalAmount(),
+                order.getCreatedAt(),
+                order.getUpdatedAt()
+        );
+    }
+}

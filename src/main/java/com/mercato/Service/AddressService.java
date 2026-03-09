@@ -20,6 +20,4 @@ public interface AddressService {
     void deleteAddress(String addressId);
 
     Address getAddressById(String addressId);
-
-    AddressResponseDTO buildAddressResponseDTO(Address address);
 }

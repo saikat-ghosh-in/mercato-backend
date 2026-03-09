@@ -5,11 +5,10 @@ import com.mercato.Entity.cart.CartItem;
 import com.mercato.Entity.EcommUser;
 import com.mercato.Entity.Product;
 import com.mercato.ExceptionHandler.ResourceNotFoundException;
+import com.mercato.Mapper.CartMapper;
 import com.mercato.Payloads.Request.CartItemRequestDTO;
 import com.mercato.Payloads.Request.CartRequestDTO;
-import com.mercato.Payloads.Response.CartChargeResponseDTO;
 import com.mercato.Payloads.Response.CartResponseDTO;
-import com.mercato.Payloads.Response.CartItemResponseDTO;
 import com.mercato.Repository.CartRepository;
 import com.mercato.Repository.UserRepository;
 import com.mercato.Utils.CartContext;
@@ -17,10 +16,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -53,7 +50,7 @@ public class CartServiceImpl implements CartService {
 
         cartPricingService.applyCharges(cart);
         cartRepository.save(cart);
-        return buildCartResponseDTO(cart);
+        return CartMapper.toDto(cart);
     }
 
     @Override
@@ -61,7 +58,7 @@ public class CartServiceImpl implements CartService {
     public CartResponseDTO getCart(CartContext context) {
         Cart cart = resolveCart(context);
         cartPricingService.applyCharges(cart);
-        return buildCartResponseDTO(cart);
+        return CartMapper.toDto(cart);
     }
 
     @Override
@@ -78,7 +75,7 @@ public class CartServiceImpl implements CartService {
 
         cartPricingService.applyCharges(cart);
         cartRepository.save(cart);
-        return buildCartResponseDTO(cart);
+        return CartMapper.toDto(cart);
     }
 
     @Override
@@ -157,8 +154,8 @@ public class CartServiceImpl implements CartService {
     @Transactional(readOnly = true)
     public List<CartResponseDTO> getAllCarts() {
         return cartRepository.findAll().stream()
-                .map(this::buildCartResponseDTO)
-                .collect(Collectors.toList());
+                .map(CartMapper::toDto)
+                .toList();
     }
 
     @Override
@@ -167,7 +164,7 @@ public class CartServiceImpl implements CartService {
         if (cartId == null) throw new IllegalArgumentException("cartId must not be null!");
         Cart cart = cartRepository.findByCartId(cartId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cart", "cartId", cartId));
-        return buildCartResponseDTO(cart);
+        return CartMapper.toDto(cart);
     }
 
     private Cart resolveCart(CartContext context) {
@@ -196,30 +193,5 @@ public class CartServiceImpl implements CartService {
                 .guestToken(guestToken)
                 .build();
         return cartRepository.save(cart);
-    }
-
-    private CartResponseDTO buildCartResponseDTO(Cart cart) {
-        if (cart == null) return null;
-        List<CartItemResponseDTO> items = cart.getCartItems().stream()
-                .map(cartItem -> new CartItemResponseDTO(
-                        cartItem.getProduct().getProductId(),
-                        cartItem.getQuantity(),
-                        cartItem.getItemPrice(),
-                        cartItem.getLineTotal(),
-                        cartItem.isOutOfStock()
-                )).toList();
-        return new CartResponseDTO(
-                cart.getCartId(),
-                cart.getSubtotal(),
-                cart.getCharges().stream()
-                        .map(charge -> new CartChargeResponseDTO(
-                                charge.getType(),
-                                charge.getAmount(),
-                                charge.getDescription()
-                        )).toList(),
-                cart.getTotalCharges(),
-                cart.getTotal(),
-                items
-        );
     }
 }

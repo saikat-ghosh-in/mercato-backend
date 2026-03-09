@@ -3,12 +3,14 @@ package com.mercato.Service;
 import com.mercato.Entity.Address;
 import com.mercato.Entity.EcommUser;
 import com.mercato.Entity.fulfillment.*;
+import com.mercato.Entity.fulfillment.payment.Payment;
+import com.mercato.Entity.fulfillment.payment.PaymentMethod;
+import com.mercato.Entity.fulfillment.payment.PaymentStatus;
 import com.mercato.ExceptionHandler.CustomBadRequestException;
 import com.mercato.ExceptionHandler.ResourceNotFoundException;
 import com.mercato.Payloads.Request.PaymentConfirmationRequestDTO;
 import com.mercato.Payloads.Request.StripePaymentRequestDTO;
 import com.mercato.Payloads.Response.PaymentConfirmationResponseDTO;
-import com.mercato.Payloads.Response.PaymentResponseDTO;
 import com.mercato.Repository.OrderRepository;
 import com.mercato.Repository.PaymentRepository;
 import com.mercato.Utils.AuthUtil;
@@ -56,7 +58,7 @@ public class StripeServiceImpl implements StripeService {
             customer = retrieveStripeCustomerFromEmail(user.getEmail());
         } catch (StripeException e) {
             Address address = addressService.getAddressById(stripePaymentRequestDTO.getAddressId());
-            customer = createStripeCustomerFromEmail(user, address);
+            customer = createStripeCustomer(user, address);
         }
 
         PaymentIntentCreateParams params =
@@ -160,7 +162,7 @@ public class StripeServiceImpl implements StripeService {
         return customers.getData().get(0);
     }
 
-    private Customer createStripeCustomerFromEmail(EcommUser user, Address billingAddress) throws StripeException {
+    private Customer createStripeCustomer(EcommUser user, Address billingAddress) throws StripeException {
         try {
             return retrieveStripeCustomerFromEmail(user.getEmail());
         } catch (StripeException e) {
@@ -183,21 +185,5 @@ public class StripeServiceImpl implements StripeService {
                             .build();
             return Customer.create(params);
         }
-    }
-
-    @Override
-    public PaymentResponseDTO buildPaymentDto(Payment payment) {
-        return new PaymentResponseDTO(
-                payment.getPaymentId(),
-                payment.getAmount(),
-                payment.getCurrency(),
-                payment.getPaymentMethod().toString(),
-                payment.getStatus().toString(),
-                payment.getGatewayReference(),
-                payment.getGatewayName(),
-                payment.getGatewayResponseMessage(),
-                payment.getInitiatedAt(),
-                payment.getCompletedAt()
-        );
     }
 }

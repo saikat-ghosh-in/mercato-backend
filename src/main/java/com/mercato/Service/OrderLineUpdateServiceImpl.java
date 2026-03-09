@@ -3,6 +3,7 @@ package com.mercato.Service;
 import com.mercato.Entity.fulfillment.*;
 import com.mercato.ExceptionHandler.CustomBadRequestException;
 import com.mercato.ExceptionHandler.ResourceNotFoundException;
+import com.mercato.Mapper.OrderLineMapper;
 import com.mercato.Payloads.Request.OrderLineUpdateRequestDTO;
 import com.mercato.Payloads.Response.OrderLineResponseDTO;
 import com.mercato.Repository.OrderLineRepository;
@@ -21,6 +22,7 @@ public class OrderLineUpdateServiceImpl implements OrderLineUpdateService {
     private final OrderLineRepository orderLineRepository;
     private final OrderRepository orderRepository;
     private final OrderReservationService orderReservationService;
+    private final RefundService refundService;
 
     @Override
     @Transactional
@@ -80,7 +82,7 @@ public class OrderLineUpdateServiceImpl implements OrderLineUpdateService {
         syncOrderStatus(orderLine.getOrder());
         orderLineRepository.save(orderLine);
 
-        return buildOrderLineDto(orderLine);
+        return OrderLineMapper.toDto(orderLine);
     }
 
     private void handleAccept(OrderLine orderLine, int qty) {
@@ -153,30 +155,9 @@ public class OrderLineUpdateServiceImpl implements OrderLineUpdateService {
         }
 
         orderRepository.save(order);
-    }
 
-    private OrderLineResponseDTO buildOrderLineDto(OrderLine orderLine) {
-        return new OrderLineResponseDTO(
-                orderLine.getOrder().getOrderId(),
-                orderLine.getOrderLineNumber(),
-                orderLine.getOrderLineStatus().toString(),
-                new OrderLineResponseDTO.ProductDetails(
-                        orderLine.getProductId(),
-                        orderLine.getProductName(),
-                        orderLine.getUnitPrice()
-                ),
-                new OrderLineResponseDTO.Seller(
-                        orderLine.getSellerName(),
-                        orderLine.getSellerEmail()
-                ),
-                orderLine.getOrderedQty(),
-                orderLine.getAcceptedQty(),
-                orderLine.getShippedQty(),
-                orderLine.getCancelledQty(),
-                orderLine.getPendingQty(),
-                orderLine.getLineTotal(),
-                orderLine.getCreatedAt(),
-                orderLine.getUpdatedAt()
-        );
+        if (allCancelled || allClosed) {
+            refundService.processRefundIfRequired(order);
+        }
     }
 }

@@ -1,12 +1,9 @@
 package com.mercato.Controller;
 
 import com.mercato.Entity.fulfillment.TransitionTrigger;
-import com.mercato.Payloads.Request.OrderLineUpdateRequestDTO;
-import com.mercato.Payloads.Request.PaymentConfirmationRequestDTO;
-import com.mercato.Payloads.Request.StripePaymentRequestDTO;
+import com.mercato.Payloads.Request.*;
 import com.mercato.Payloads.Response.OrderLineResponseDTO;
 import com.mercato.Payloads.Response.OrderResponseDTO;
-import com.mercato.Payloads.Request.OrderCaptureRequestDTO;
 import com.mercato.Payloads.Response.PaymentConfirmationResponseDTO;
 import com.mercato.Service.OrderLineUpdateService;
 import com.mercato.Service.OrderService;
@@ -85,6 +82,12 @@ public class OrderController {
     public ResponseEntity<OrderLineResponseDTO> updateOrderLine(@RequestBody @Valid OrderLineUpdateRequestDTO request) {
         TransitionTrigger trigger = authUtil.resolveTransitionTrigger();
         OrderLineResponseDTO response = orderLineUpdateService.updateOrderLine(request, trigger);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/users/orders/cancel")
+    public ResponseEntity<OrderResponseDTO> cancelOrder(@RequestBody @Valid OrderCancelRequestDTO request) {
+        OrderResponseDTO response = orderService.cancelOrder(request);
         return ResponseEntity.ok(response);
     }
 }

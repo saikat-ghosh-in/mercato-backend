@@ -1,5 +1,6 @@
-package com.mercato.Entity.fulfillment;
+package com.mercato.Entity.fulfillment.payment;
 
+import com.mercato.Entity.fulfillment.Order;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -46,11 +47,14 @@ public class Payment {
     @OneToOne(mappedBy = "payment", optional = false)
     private Order order;
 
+    @OneToOne(mappedBy = "payment", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Refund refund;
+
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal amount;
 
     @Column(length = 3, nullable = false)
-    private String currency; // INR
+    private String currency;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

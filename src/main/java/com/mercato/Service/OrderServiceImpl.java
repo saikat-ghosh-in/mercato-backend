@@ -4,22 +4,24 @@ import com.mercato.Entity.*;
 import com.mercato.Entity.cart.Cart;
 import com.mercato.Entity.cart.CartItem;
 import com.mercato.Entity.fulfillment.*;
+import com.mercato.Entity.fulfillment.payment.PaymentMethod;
 import com.mercato.ExceptionHandler.CustomBadRequestException;
 import com.mercato.ExceptionHandler.InsufficientInventoryException;
 import com.mercato.ExceptionHandler.ResourceNotFoundException;
+import com.mercato.Mapper.OrderMapper;
+import com.mercato.Payloads.Request.OrderCancelRequestDTO;
+import com.mercato.Payloads.Request.OrderLineUpdateRequestDTO;
 import com.mercato.Payloads.Response.OrderResponseDTO;
-import com.mercato.Payloads.Response.OrderLineResponseDTO;
 import com.mercato.Payloads.Request.OrderCaptureRequestDTO;
-import com.mercato.Repository.OrderLineRepository;
 import com.mercato.Repository.OrderRepository;
 import com.mercato.Repository.ProductRepository;
-import com.mercato.Repository.StateTransitionRepository;
 import com.mercato.Utils.AuthUtil;
 import com.mercato.Utils.CartContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
@@ -37,8 +39,7 @@ public class OrderServiceImpl implements OrderService {
     private final AuthUtil authUtil;
     private final CartReservationService cartReservationService;
     private final ProductRepository productRepository;
-    private final OrderLineRepository orderLineRepository;
-    private final StateTransitionRepository stateTransitionRepository;
+    private final OrderLineUpdateService orderLineUpdateService;
 
     @Override
     @Transactional
@@ -63,14 +64,14 @@ public class OrderServiceImpl implements OrderService {
         CartContext context = new CartContext(currentUser.getUserId(), null);
         cartService.clearCart(context);
 
-        return buildOrderDto(order);
+        return OrderMapper.toDto(order);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<OrderResponseDTO> getAllOrders() {
         return orderRepository.findAll().stream()
-                .map(this::buildOrderDto)
+                .map(OrderMapper::toDto)
                 .toList();
     }
 
@@ -80,7 +81,7 @@ public class OrderServiceImpl implements OrderService {
         EcommUser currentUser = authUtil.getLoggedInUser();
         return orderRepository.findAllByCustomerEmailWithLines(currentUser.getEmail())
                 .stream()
-                .map(this::buildOrderDto)
+                .map(OrderMapper::toDto)
                 .toList();
     }
 
@@ -90,7 +91,7 @@ public class OrderServiceImpl implements OrderService {
         EcommUser currentUser = authUtil.getLoggedInUser();
         Order order = orderRepository.findByOrderIdAndCustomerEmailWithLines(orderId, currentUser.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "orderId", orderId));
-        return buildOrderDto(order);
+        return OrderMapper.toDto(order);
     }
 
     @Override
@@ -98,7 +99,54 @@ public class OrderServiceImpl implements OrderService {
     public OrderResponseDTO getOrder(String orderId) {
         Order order = orderRepository.findByOrderIdWithLines(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "orderId", orderId));
-        return buildOrderDto(order);
+        return OrderMapper.toDto(order);
+    }
+
+    @Override
+    @Transactional
+    public OrderResponseDTO cancelOrder(OrderCancelRequestDTO request) {
+        TransitionTrigger trigger = authUtil.resolveTransitionTrigger();
+
+        Order order;
+        if (trigger == TransitionTrigger.ADMIN) {
+            order = orderRepository.findByOrderIdWithLines(request.getOrderId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Order", "orderId", request.getOrderId()));
+        } else {
+            EcommUser currentUser = authUtil.getLoggedInUser();
+            order = orderRepository.findByOrderIdAndCustomerEmailWithLines(
+                            request.getOrderId(), currentUser.getEmail()
+                    )
+                    .orElseThrow(() -> new ResourceNotFoundException("Order", "orderId", request.getOrderId()));
+        }
+
+        if (trigger != TransitionTrigger.ADMIN) {
+            Instant confirmedAt = order.getPayment().getCompletedAt();
+            if (confirmedAt == null) {
+                throw new CustomBadRequestException("Order has not been confirmed yet");
+            }
+            if (Instant.now().isAfter(confirmedAt.plusSeconds(6 * 60 * 60))) {
+                throw new CustomBadRequestException(
+                        "Cancellation window has expired. Orders can only be cancelled within 6 hours of confirmation"
+                );
+            }
+        }
+
+        order.getOrderLines().forEach(line -> {
+            if (!line.isTerminal() && line.hasPendingQty()) {
+                OrderLineUpdateRequestDTO lineRequest = new OrderLineUpdateRequestDTO();
+                lineRequest.setFulfillmentId(line.getFulfillmentId());
+                lineRequest.setOrderLineNumber(line.getOrderLineNumber());
+                lineRequest.setAction(OrderLineAction.CANCEL);
+                lineRequest.setQty(line.getPendingQty());
+                lineRequest.setReason(request.getReason());
+                orderLineUpdateService.updateOrderLine(lineRequest, trigger);
+            }
+        });
+
+        Order updatedOrder = orderRepository.findByOrderIdWithLines(request.getOrderId())
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "orderId", request.getOrderId()));
+
+        return OrderMapper.toDto(updatedOrder);
     }
 
 
@@ -122,8 +170,7 @@ public class OrderServiceImpl implements OrderService {
         productRepository.save(product);
     }
 
-    private Order buildOrder(Cart cart, OrderCaptureRequestDTO orderCaptureRequestDTO,
-                             EcommUser customer) {
+    private Order buildOrder(Cart cart, OrderCaptureRequestDTO orderCaptureRequestDTO, EcommUser customer) {
         List<CartItem> cartItems = cart.getCartItems();
 
         Order order = new Order();
@@ -178,63 +225,5 @@ public class OrderServiceImpl implements OrderService {
         String randomPart = UUID.randomUUID().toString().replace("-", "")
                 .substring(0, 12).toUpperCase();
         return "FUL-" + datePart + "-" + randomPart;
-    }
-
-    private OrderResponseDTO buildOrderDto(Order order) {
-        List<OrderLineResponseDTO> orderLineDTOs = order.getOrderLines().stream()
-                .map(this::buildOrderLineDto)
-                .toList();
-
-        return new OrderResponseDTO(
-                order.getOrderId(),
-                order.getOrderStatus().toString(),
-                new OrderResponseDTO.Customer(
-                        order.getCustomerName(),
-                        order.getCustomerEmail()
-                ),
-                new OrderResponseDTO.DeliveryAddress(
-                        order.getRecipientName(),
-                        order.getRecipientPhone(),
-                        order.getDeliveryAddressLine1(),
-                        order.getDeliveryAddressLine2(),
-                        order.getDeliveryCity(),
-                        order.getDeliveryState(),
-                        order.getDeliveryPincode()
-                ),
-                stripeService.buildPaymentDto(order.getPayment()),
-                orderLineDTOs,
-                order.getCurrency(),
-                order.getSubtotal(),
-                order.getCharges(),
-                order.getTotalAmount(),
-                null,
-                order.getCreatedAt(),
-                order.getUpdatedAt()
-        );
-    }
-
-    private OrderLineResponseDTO buildOrderLineDto(OrderLine orderLine) {
-        return new OrderLineResponseDTO(
-                orderLine.getOrder().getOrderId(),
-                orderLine.getOrderLineNumber(),
-                orderLine.getOrderLineStatus().toString(),
-                new OrderLineResponseDTO.ProductDetails(
-                        orderLine.getProductId(),
-                        orderLine.getProductName(),
-                        orderLine.getUnitPrice()
-                ),
-                new OrderLineResponseDTO.Seller(
-                        orderLine.getSellerName(),
-                        orderLine.getSellerEmail()
-                ),
-                orderLine.getOrderedQty(),
-                orderLine.getAcceptedQty(),
-                orderLine.getShippedQty(),
-                orderLine.getCancelledQty(),
-                orderLine.getPendingQty(),
-                orderLine.getLineTotal(),
-                orderLine.getCreatedAt(),
-                orderLine.getUpdatedAt()
-        );
     }
 }

@@ -8,6 +8,7 @@ import com.mercato.Entity.SupplyType;
 import com.mercato.ExceptionHandler.ForbiddenOperationException;
 import com.mercato.ExceptionHandler.ResourceAlreadyExistsException;
 import com.mercato.ExceptionHandler.ResourceNotFoundException;
+import com.mercato.Mapper.ProductMapper;
 import com.mercato.Payloads.Request.ProductRequestDTO;
 import com.mercato.Payloads.Request.ProductSupplyUpdateRequestDTO;
 import com.mercato.Payloads.Response.ProductResponseDTO;
@@ -37,9 +38,6 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
-
-    @Value("${images.base.url}")
-    private String imageBaseUrl;
 
     @Value("${images.products.folder}")
     private String productsImageFolder;
@@ -76,7 +74,7 @@ public class ProductServiceImpl implements ProductService {
         product.setSeller(user);
 
         Product savedProduct = productRepository.save(product);
-        return buildProductDto(savedProduct);
+        return ProductMapper.toDto(savedProduct);
     }
 
     @Override
@@ -136,7 +134,7 @@ public class ProductServiceImpl implements ProductService {
         }
 
         List<ProductResponseDTO> productResponseDTOList = products.stream()
-                .map(this::buildProductDto)
+                .map(ProductMapper::toDto)
                 .toList();
 
         return ProductResponse.builder()
@@ -156,7 +154,7 @@ public class ProductServiceImpl implements ProductService {
             throw new IllegalArgumentException("productId must not be null!");
         Product product = productRepository.findByProductId(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
-        return buildProductDto(product);
+        return ProductMapper.toDto(product);
     }
 
     @Override
@@ -186,7 +184,7 @@ public class ProductServiceImpl implements ProductService {
         product.setDiscountPercent(productRequestDTO.getDiscountPercent());
 
         Product savedProduct = productRepository.save(product);
-        return buildProductDto(savedProduct);
+        return ProductMapper.toDto(savedProduct);
     }
 
     @Override
@@ -222,7 +220,7 @@ public class ProductServiceImpl implements ProductService {
         product.setImagePath(imageFilePath);
 
         Product savedProduct = productRepository.save(product);
-        return buildProductDto(savedProduct);
+        return ProductMapper.toDto(savedProduct);
     }
 
     @Override
@@ -298,34 +296,6 @@ public class ProductServiceImpl implements ProductService {
         return "success";
     }
 
-    private ProductResponseDTO buildProductDto(Product product) {
-        return new ProductResponseDTO(
-                product.getProductId(),
-                product.getProductName(),
-                product.isActive(),
-                product.getCategory().getCategoryId(),
-                product.getCategory().getCategoryName(),
-                constructImageUrl(product.getImagePath()),
-                product.getDescription(),
-                product.getPhysicalQty(),
-                product.getReservedQty(),
-                product.getAvailableQty(),
-                product.getRetailPrice(),
-                product.getDiscountPercent(),
-                product.getSellingPrice(),
-                product.getSeller().getSellerDisplayName(),
-                product.getCreatedAt(),
-                product.getUpdatedAt()
-        );
-    }
-
-    private String constructImageUrl(String imagePath) {
-        if (imagePath == null || imagePath.isEmpty() || imagePath.equals(placeholderImageUrl))
-            return placeholderImageUrl;
-        return imageBaseUrl.endsWith("/")
-                ? imageBaseUrl + imagePath
-                : imageBaseUrl + "/" + imagePath;
-    }
 
     private void validateIfAlreadyExists(String productName) {
         if (productRepository.existsByProductName(productName))

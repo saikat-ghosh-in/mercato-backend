@@ -5,6 +5,7 @@ import com.mercato.Security.jwt.AuthTokenFilter;
 import com.mercato.Security.jwt.GuestTokenFilter;
 import com.mercato.Security.services.UserDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -27,11 +28,21 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SpringSecurityConfig {
     private final UserDetailsServiceImpl userDetailsService;
     private final AuthEntryPointJwt unauthorizedHandler;
-    private final GuestTokenFilter guestTokenFilter;  // add this
+    private final AuthTokenFilter authTokenFilter;
+    private final GuestTokenFilter guestTokenFilter;
 
     @Bean
-    public AuthTokenFilter authenticationJwtTokenFilter() {
-        return new AuthTokenFilter();
+    public FilterRegistrationBean<AuthTokenFilter> authTokenFilterRegistration(AuthTokenFilter authTokenFilter) {
+        FilterRegistrationBean<AuthTokenFilter> registration = new FilterRegistrationBean<>(authTokenFilter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
+    public FilterRegistrationBean<GuestTokenFilter> guestTokenFilterRegistration(GuestTokenFilter guestTokenFilter) {
+        FilterRegistrationBean<GuestTokenFilter> registration = new FilterRegistrationBean<>(guestTokenFilter);
+        registration.setEnabled(false);
+        return registration;
     }
 
     @Bean
@@ -68,7 +79,7 @@ public class SpringSecurityConfig {
                 )
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(guestTokenFilter, AuthTokenFilter.class)
-                .addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

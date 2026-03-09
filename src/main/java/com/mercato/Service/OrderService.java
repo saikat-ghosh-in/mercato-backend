@@ -1,5 +1,6 @@
 package com.mercato.Service;
 
+import com.mercato.Payloads.Request.OrderCancelRequestDTO;
 import com.mercato.Payloads.Response.OrderResponseDTO;
 import com.mercato.Payloads.Request.OrderCaptureRequestDTO;
 
@@ -15,4 +16,6 @@ public interface OrderService {
     OrderResponseDTO getCurrentUserOrder(String orderId);
 
     OrderResponseDTO getOrder(String orderId);
+
+    OrderResponseDTO cancelOrder(OrderCancelRequestDTO request);
 }

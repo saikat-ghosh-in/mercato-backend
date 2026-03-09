@@ -6,7 +6,6 @@ import lombok.Getter;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 
 @Getter
 @AllArgsConstructor
@@ -17,6 +16,7 @@ public class OrderResponseDTO {
     private Customer customer;
     private DeliveryAddress deliveryAddress;
     private PaymentResponseDTO paymentSummary;
+    private RefundResponseDTO refundSummary;
 
     private List<OrderLineResponseDTO> orderLines;
 
@@ -25,7 +25,6 @@ public class OrderResponseDTO {
     private BigDecimal charges;
     private BigDecimal totalAmount;
 
-    private Map<String, List<StateTransitionDTO>> stateTransitions;
     private Instant createDate;
     private Instant updateDate;
 
