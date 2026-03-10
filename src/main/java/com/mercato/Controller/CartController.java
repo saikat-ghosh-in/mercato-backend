@@ -58,7 +58,6 @@ public class CartController {
         return new ResponseEntity<>("Cart has been cleared.", HttpStatus.OK);
     }
 
-    // Admin endpoints — unchanged, no CartContext needed
     @GetMapping("/admin/carts")
     public ResponseEntity<List<CartResponseDTO>> getAllCarts() {
         List<CartResponseDTO> cartResponseDTOList = cartService.getAllCarts();

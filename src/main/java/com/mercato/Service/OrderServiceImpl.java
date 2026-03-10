@@ -4,20 +4,28 @@ import com.mercato.Entity.*;
 import com.mercato.Entity.cart.Cart;
 import com.mercato.Entity.cart.CartItem;
 import com.mercato.Entity.fulfillment.*;
+import com.mercato.Entity.fulfillment.payment.Payment;
 import com.mercato.Entity.fulfillment.payment.PaymentMethod;
+import com.mercato.Entity.fulfillment.payment.PaymentStatus;
 import com.mercato.ExceptionHandler.CustomBadRequestException;
 import com.mercato.ExceptionHandler.InsufficientInventoryException;
 import com.mercato.ExceptionHandler.ResourceNotFoundException;
 import com.mercato.Mapper.OrderMapper;
 import com.mercato.Payloads.Request.OrderCancelRequestDTO;
 import com.mercato.Payloads.Request.OrderLineUpdateRequestDTO;
+import com.mercato.Payloads.Response.OrderPlacementResponseDTO;
 import com.mercato.Payloads.Response.OrderResponseDTO;
 import com.mercato.Payloads.Request.OrderCaptureRequestDTO;
+import com.mercato.Repository.AddressRepository;
 import com.mercato.Repository.OrderRepository;
+import com.mercato.Repository.PaymentRepository;
 import com.mercato.Repository.ProductRepository;
 import com.mercato.Utils.AuthUtil;
 import com.mercato.Utils.CartContext;
+import com.stripe.exception.StripeException;
+import com.stripe.model.PaymentIntent;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,41 +38,97 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final CartService cartService;
     private final StripeService stripeService;
-    private final AddressService addressService;
+    private final AddressRepository addressRepository;
     private final AuthUtil authUtil;
     private final CartReservationService cartReservationService;
     private final ProductRepository productRepository;
+    private final PaymentRepository paymentRepository;
     private final OrderLineUpdateService orderLineUpdateService;
 
     @Override
     @Transactional
-    public OrderResponseDTO placeOrder(OrderCaptureRequestDTO orderCaptureRequestDTO) {
-        EcommUser currentUser = authUtil.getLoggedInUser();
-        Cart cart = cartService.getCartByUser(currentUser);
+    public OrderPlacementResponseDTO placeOrder(OrderCaptureRequestDTO orderCaptureRequestDTO) {
+        EcommUser user = authUtil.getLoggedInUser();
+        Cart cart = cartService.getCartByUser(user);
 
         if (cart == null || cart.getCartItems() == null || cart.getCartItems().isEmpty()) {
             throw new CustomBadRequestException("Cart is empty");
         }
 
+        Order order = buildOrder(cart, orderCaptureRequestDTO, user);
+
         cart.getCartItems().forEach(this::clearCartReservationAndValidateStock);
-
-        Order order = buildOrder(cart, orderCaptureRequestDTO, currentUser);
-        stripeService.initiatePayment(
-                order,
-                PaymentMethod.getFromString(orderCaptureRequestDTO.getPaymentMethod())
-        );
-
         orderRepository.save(order);
 
-        CartContext context = new CartContext(currentUser.getUserId(), null);
+        CartContext context = new CartContext(user.getUserId(), null);
         cartService.clearCart(context);
 
-        return OrderMapper.toDto(order);
+        try {
+            PaymentIntent paymentIntent = stripeService.createPaymentIntent(order, user);
+            stripeService.initiatePayment(
+                    order,
+                    PaymentMethod.getFromString(orderCaptureRequestDTO.getPaymentMethod()),
+                    paymentIntent.getId(),
+                    paymentIntent.getClientSecret()
+            );
+        } catch (StripeException e) {
+            throw new CustomBadRequestException(
+                    "Payment initiation failed: " + e.getMessage()
+            );
+        }
+
+        return new OrderPlacementResponseDTO(
+                order.getPayment().getClientSecret(),
+                OrderMapper.toDto(order)
+        );
+    }
+
+    @Override
+    @Transactional
+    public String retryPayment(String orderId) throws StripeException {
+        EcommUser currentUser = authUtil.getLoggedInUser();
+        Order order = orderRepository.findByOrderIdAndCustomerEmailWithLines(orderId, currentUser.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "orderId", orderId));
+
+        if (!OrderStatus.CREATED.equals(order.getOrderStatus())) {
+            throw new CustomBadRequestException("Order is not in a payable state");
+        }
+
+        Payment payment = order.getPayment();
+
+        if (payment == null) {
+            throw new CustomBadRequestException("No payment found for this order");
+        }
+
+        if (PaymentStatus.SUCCESS.equals(payment.getStatus())) {
+            throw new CustomBadRequestException("Order is already paid");
+        }
+
+        String stripeStatus = PaymentIntent.retrieve(payment.getGatewayReference()).getStatus();
+
+        if ("requires_payment_method".equals(stripeStatus) || "requires_confirmation".equals(stripeStatus)) {
+            return payment.getClientSecret();
+        }
+
+        if ("canceled".equals(stripeStatus)) {
+            PaymentIntent newIntent = stripeService.createPaymentIntent(order, currentUser);
+            payment.setStatus(PaymentStatus.INITIATED);
+            payment.setGatewayReference(newIntent.getId());
+            payment.setClientSecret(newIntent.getClientSecret());
+            payment.setGatewayResponseMessage(null);
+            payment.setCompletedAt(null);
+            payment.setInitiatedAt(Instant.now());
+            paymentRepository.save(payment);
+            return newIntent.getClientSecret();
+        }
+
+        throw new CustomBadRequestException("Payment cannot be retried at this time, stripe status: " + stripeStatus);
     }
 
     @Override
@@ -119,8 +183,25 @@ public class OrderServiceImpl implements OrderService {
                     .orElseThrow(() -> new ResourceNotFoundException("Order", "orderId", request.getOrderId()));
         }
 
+        Payment payment = order.getPayment();
+        if (!PaymentStatus.SUCCESS.equals(payment.getStatus())) {
+            if (PaymentStatus.CANCELLED.equals(payment.getStatus())) {
+                throw new CustomBadRequestException("Order is already cancelled");
+            }
+            try {
+                stripeService.cancelPaymentIntent(payment.getGatewayReference());
+            } catch (StripeException e) {
+                log.warn("Failed to cancel PaymentIntent on Stripe: {}", e.getMessage());
+            }
+            payment.setStatus(PaymentStatus.CANCELLED);
+            payment.setGatewayResponseMessage("Cancelled by user before payment");
+            order.setOrderStatus(OrderStatus.CANCELLED);
+            orderRepository.save(order);
+            return OrderMapper.toDto(order);
+        }
+
         if (trigger != TransitionTrigger.ADMIN) {
-            Instant confirmedAt = order.getPayment().getCompletedAt();
+            Instant confirmedAt = payment.getCompletedAt();
             if (confirmedAt == null) {
                 throw new CustomBadRequestException("Order has not been confirmed yet");
             }
@@ -160,14 +241,11 @@ public class OrderServiceImpl implements OrderService {
                         "Product", "productId", cartItem.getProduct().getProductId()
                 ));
 
-        if (product.getPhysicalQty() < cartItem.getQuantity()) {
+        if (product.getAvailableQty() < cartItem.getQuantity()) {
             throw new InsufficientInventoryException(
-                    product.getProductName(), product.getPhysicalQty()
+                    product.getProductName(), product.getAvailableQty()
             );
         }
-
-        product.adjustInventory(-cartItem.getQuantity());
-        productRepository.save(product);
     }
 
     private Order buildOrder(Cart cart, OrderCaptureRequestDTO orderCaptureRequestDTO, EcommUser customer) {
@@ -178,7 +256,10 @@ public class OrderServiceImpl implements OrderService {
         order.setCustomerEmail(customer.getEmail());
         order.setOrderStatus(OrderStatus.CREATED);
 
-        Address address = addressService.getAddressById(orderCaptureRequestDTO.getAddressId());
+        Address address = addressRepository.findByAddressId(orderCaptureRequestDTO.getAddressId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Address", "addressId", orderCaptureRequestDTO.getAddressId())
+                );
         order.setRecipientName(address.getRecipientName());
         order.setRecipientPhone(address.getRecipientPhone());
         order.setDeliveryAddressLine1(address.getAddressLine1());

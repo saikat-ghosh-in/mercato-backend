@@ -3,12 +3,13 @@ package com.mercato.Controller;
 import com.mercato.Configuration.AppConstants;
 import com.mercato.Payloads.Request.CategoryRequestDTO;
 import com.mercato.Payloads.Response.CategoryResponseDTO;
-import com.mercato.Payloads.Response.CategoryResponse;
 import com.mercato.Service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api")
@@ -24,12 +25,12 @@ public class CategoryController {
     }
 
     @GetMapping("/public/categories")
-    public ResponseEntity<CategoryResponse> getAllCategories(@RequestParam(defaultValue = AppConstants.PAGE_NUMBER) Integer pageNumber,
-                                                             @RequestParam(defaultValue = AppConstants.PAGE_SIZE) Integer pageSize,
-                                                             @RequestParam(defaultValue = AppConstants.SORT_CATEGORIES_BY) String sortBy,
-                                                             @RequestParam(defaultValue = AppConstants.SORTING_ORDER) String sortingOrder) {
-        CategoryResponse categoryResponse = categoryService.getAllCategories(pageNumber, pageSize, sortBy, sortingOrder);
-        return new ResponseEntity<>(categoryResponse, HttpStatus.OK);
+    public ResponseEntity<List<CategoryResponseDTO>> getAllCategories(
+            @RequestParam(defaultValue = AppConstants.SORT_CATEGORIES_BY) String sortBy,
+            @RequestParam(defaultValue = AppConstants.SORTING_ORDER) String sortingOrder
+    ) {
+        List<CategoryResponseDTO> categories = categoryService.getAllCategories(sortBy, sortingOrder);
+        return new ResponseEntity<>(categories, HttpStatus.OK);
     }
 
     @GetMapping("/public/categories/{categoryId}")
@@ -39,7 +40,7 @@ public class CategoryController {
     }
 
     @PutMapping("/admin/categories/{categoryId}")
-    public ResponseEntity<CategoryResponseDTO> updateCategory(@RequestBody String categoryId,
+    public ResponseEntity<CategoryResponseDTO> updateCategory(@PathVariable String categoryId,
                                                               @RequestBody CategoryRequestDTO categoryRequestDTO) {
         CategoryResponseDTO updatedCategoryResponseDTO = categoryService.updateCategory(categoryId, categoryRequestDTO);
         return new ResponseEntity<>(updatedCategoryResponseDTO, HttpStatus.OK);

@@ -10,6 +10,7 @@ import com.mercato.Payloads.Request.CartItemRequestDTO;
 import com.mercato.Payloads.Request.CartRequestDTO;
 import com.mercato.Payloads.Response.CartResponseDTO;
 import com.mercato.Repository.CartRepository;
+import com.mercato.Repository.ProductRepository;
 import com.mercato.Repository.UserRepository;
 import com.mercato.Utils.CartContext;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +25,7 @@ import java.util.Optional;
 public class CartServiceImpl implements CartService {
 
     private final CartRepository cartRepository;
-    private final ProductService productService;
+    private final ProductRepository productRepository;
     private final CartPricingService cartPricingService;
     private final UserRepository userRepository;
     private final CartReservationService cartReservationService;
@@ -40,7 +41,10 @@ public class CartServiceImpl implements CartService {
             if (requestedQuantity == null || requestedQuantity <= 0)
                 throw new IllegalArgumentException("Quantity must be greater than 0");
 
-            Product product = productService.getProductByIdForUpdate(productId);
+            Product product = productRepository.findByProductIdForUpdate(productId)
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Product", "productId", productId
+                    ));
             cart.addProduct(product, requestedQuantity);
 
             CartItem cartItem = cart.findItemByProductId(productId)
@@ -54,7 +58,7 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public CartResponseDTO getCart(CartContext context) {
         Cart cart = resolveCart(context);
         cartPricingService.applyCharges(cart);
@@ -66,6 +70,10 @@ public class CartServiceImpl implements CartService {
     public CartResponseDTO updateProductQuantityInCart(CartItemRequestDTO dto, CartContext context) {
         if (dto.getQuantity() == null || dto.getQuantity() < 0)
             throw new IllegalArgumentException("Quantity cannot be less than 0");
+        if (dto.getQuantity() == 0) {
+            deleteProductFromCart(dto.getProductId(), context);
+            return CartMapper.toDto(resolveCart(context));
+        }
 
         Cart cart = resolveCart(context);
         cart.updateProductQuantity(dto.getProductId(), dto.getQuantity());

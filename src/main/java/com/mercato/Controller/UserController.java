@@ -41,11 +41,4 @@ public class UserController {
         EcommUserResponseDTO user = authService.getCurrentUserFromAuthentication();
         return ResponseEntity.ok(user);
     }
-
-//    @PutMapping("/users/user/{userId}")
-//    public ResponseEntity<EcommUserResponseDTO> editUserInfo(@PathVariable String userId,
-//                                                             @RequestBody Ecomm) {
-//        EcommUserResponseDTO user = authService.getCurrentUserFromAuthentication();
-//        return ResponseEntity.ok(user);
-//    }
 }

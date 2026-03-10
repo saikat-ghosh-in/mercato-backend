@@ -2,22 +2,16 @@ package com.mercato.Service;
 
 import com.mercato.Configuration.AppConstants;
 import com.mercato.Entity.Category;
-import com.mercato.Entity.EcommUser;
-import com.mercato.ExceptionHandler.ForbiddenOperationException;
+import com.mercato.ExceptionHandler.CustomBadRequestException;
 import com.mercato.ExceptionHandler.ResourceAlreadyExistsException;
 import com.mercato.ExceptionHandler.ResourceNotFoundException;
 import com.mercato.Mapper.CategoryMapper;
 import com.mercato.Payloads.Request.CategoryRequestDTO;
 import com.mercato.Payloads.Response.CategoryResponseDTO;
-import com.mercato.Payloads.Response.CategoryResponse;
 import com.mercato.Repository.CategoryRepository;
-import com.mercato.Utils.AuthUtil;
+import com.mercato.Repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,12 +22,13 @@ import java.util.*;
 public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
-    private final AuthUtil authUtil;
+    private final ProductRepository productRepository;
 
 
     @Override
     @Transactional
     public CategoryResponseDTO createCategory(CategoryRequestDTO categoryRequestDTO) {
+
         String categoryName = categoryRequestDTO.getCategoryName();
         validateCategory(categoryName); // throws
 
@@ -46,34 +41,22 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional(readOnly = true)
-    public CategoryResponse getAllCategories(Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder) {
-
+    public List<CategoryResponseDTO> getAllCategories(String sortBy, String sortingOrder) {
         validateSortBy(sortBy);
         Sort sort = "desc".equalsIgnoreCase(sortingOrder)
                 ? Sort.by(sortBy).descending()
                 : Sort.by(sortBy).ascending();
-        Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sort);
 
-        Page<Category> categoryPage = categoryRepository.findAll(pageDetails);
-        List<Category> categories = categoryPage.getContent();
-        List<CategoryResponseDTO> categoryResponseDTOList = categories.stream()
+        return categoryRepository.findAll(sort)
+                .stream()
                 .map(CategoryMapper::toDto)
                 .toList();
-
-        return new CategoryResponse(
-                categoryResponseDTOList,
-                categoryPage.getNumber(),
-                categoryPage.getSize(),
-                categoryPage.getTotalElements(),
-                categoryPage.getTotalPages(),
-                categoryPage.isLast()
-        );
     }
 
     @Override
     @Transactional(readOnly = true)
     public CategoryResponseDTO getCategory(String categoryId) {
-        Category category = this.getCategoryByCategoryId(categoryId);
+        Category category = getCategoryByCategoryId(categoryId);
         return CategoryMapper.toDto(category);
     }
 
@@ -81,50 +64,32 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public CategoryResponseDTO updateCategory(String categoryId, CategoryRequestDTO categoryRequestDTO) {
         String categoryName = categoryRequestDTO.getCategoryName();
-        validateCategory(categoryRequestDTO.getCategoryName()); // throws
 
-        Category category = this.getCategoryByCategoryId(categoryId); // throws
+        Category category = getCategoryByCategoryId(categoryId);
+        if (!categoryName.equals(category.getCategoryName())) {
+            validateCategory(categoryName);
+        }
+
         category.setCategoryName(categoryName);
-
         Category savedCategory = categoryRepository.save(category);
         return CategoryMapper.toDto(savedCategory);
     }
 
     @Override
     @Transactional
-    @PreAuthorize("hasRole('ADMIN')")
     public void deleteCategory(String categoryId) {
-        Category category = this.getCategoryByCategoryId(categoryId); // throws
-        categoryRepository.delete(category);
-    }
-
-    @Override
-    public Category getCategoryByCategoryId(String categoryId) {
-        if (categoryId == null) {
-            throw new IllegalArgumentException("categoryId must not be null");
+        Category category = getCategoryByCategoryId(categoryId);
+        if (productRepository.existsByCategory_CategoryId(categoryId)) {
+            throw new CustomBadRequestException(
+                    "Cannot delete category with existing products"
+            );
         }
-        return categoryRepository.findByCategoryId(categoryId)
-                .orElseThrow(() -> new ResourceNotFoundException("Category", "categoryId", categoryId));
-    }
-
-    @Override
-    public boolean existsByCategoryName(String categoryName) {
-        return categoryRepository.existsByCategoryName(categoryName);
-    }
-
-    @Override
-    public boolean existsByCategoryId(String categoryId) {
-        return categoryRepository.existsByCategoryId(categoryId);
+        categoryRepository.delete(category);
     }
 
     @Override
     @Transactional
     public String addDummyCategories() {
-        EcommUser user = authUtil.getLoggedInUser();
-        if (!user.isAdmin()) {
-            throw new ForbiddenOperationException("You are not authorized to perform this action.");
-        }
-
         List<String> dummyCategories = List.of(
                 "Mens T-Shirts",
                 "Smartphones",
@@ -169,6 +134,14 @@ public class CategoryServiceImpl implements CategoryService {
         return "Categories inserted safely";
     }
 
+
+    private Category getCategoryByCategoryId(String categoryId) {
+        if (categoryId == null) {
+            throw new IllegalArgumentException("categoryId must not be null");
+        }
+        return categoryRepository.findByCategoryId(categoryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Category", "categoryId", categoryId));
+    }
 
     private void validateCategory(String categoryName) {
         if (categoryName == null || categoryName.isBlank()) {

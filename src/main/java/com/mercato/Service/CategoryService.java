@@ -1,27 +1,21 @@
 package com.mercato.Service;
 
-import com.mercato.Entity.Category;
 import com.mercato.Payloads.Request.CategoryRequestDTO;
 import com.mercato.Payloads.Response.CategoryResponseDTO;
-import com.mercato.Payloads.Response.CategoryResponse;
+
+import java.util.List;
 
 public interface CategoryService {
 
     CategoryResponseDTO createCategory(CategoryRequestDTO categoryRequestDTO);
 
-    CategoryResponseDTO getCategory(String categoryId);
+    List<CategoryResponseDTO> getAllCategories(String sortBy, String sortingOrder);
 
-    CategoryResponse getAllCategories(Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder);
+    CategoryResponseDTO getCategory(String categoryId);
 
     CategoryResponseDTO updateCategory(String categoryId, CategoryRequestDTO categoryRequestDTO);
 
     void deleteCategory(String categoryId);
-
-    Category getCategoryByCategoryId(String categoryId);
-
-    boolean existsByCategoryName(String categoryName);
-
-    boolean existsByCategoryId(String categoryId);
 
     String addDummyCategories();
 }

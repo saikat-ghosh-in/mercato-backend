@@ -5,6 +5,7 @@ import com.mercato.Entity.fulfillment.OrderReservation;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -13,12 +14,11 @@ public interface OrderReservationRepository extends JpaRepository<OrderReservati
 
     Optional<OrderReservation> findByOrderLine_Id(Long orderLineId);
 
-    List<OrderReservation> findAllByOrder_OrderId(String orderId);
-
-    @Modifying
     @Query("""
-            DELETE FROM OrderReservation r
-            WHERE r.order.orderId = :orderId
+            SELECT or FROM OrderReservation or
+            LEFT JOIN FETCH or.orderLine
+            WHERE or.product.productId = :productId
+            ORDER BY or.createdAt DESC
             """)
-    void deleteAllByOrderId(String orderId);
+    List<OrderReservation> findAllByProductIdOrderByCreatedAtDesc(@Param("productId") String productId);
 }

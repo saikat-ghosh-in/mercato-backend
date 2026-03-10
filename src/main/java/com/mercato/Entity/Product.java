@@ -86,6 +86,9 @@ public class Product {
     @Builder.Default
     private BigDecimal discountPercent = BigDecimal.ZERO;
 
+    @Column(precision = 15, scale = 2)
+    private BigDecimal sellingPrice;
+
     @NotNull(message = "Category is required")
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
@@ -112,10 +115,15 @@ public class Product {
                     .substring(0, 6).toUpperCase();
             this.productId = "PDT-" + datePart + "-" + randomPart;
         }
+        this.sellingPrice = computeSellingPrice();
     }
 
-    @Transient
-    public BigDecimal getSellingPrice() {
+    @PreUpdate
+    private void preUpdate() {
+        this.sellingPrice = computeSellingPrice();
+    }
+
+    private BigDecimal computeSellingPrice() {
         if (discountPercent == null || discountPercent.compareTo(BigDecimal.ZERO) == 0) {
             return retailPrice.setScale(2, RoundingMode.HALF_UP);
         }

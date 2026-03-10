@@ -2,23 +2,22 @@ package com.mercato.Controller;
 
 import com.mercato.Entity.fulfillment.TransitionTrigger;
 import com.mercato.Payloads.Request.*;
-import com.mercato.Payloads.Response.FulfillmentOrderResponseDTO;
 import com.mercato.Payloads.Response.OrderLineResponseDTO;
+import com.mercato.Payloads.Response.OrderPlacementResponseDTO;
 import com.mercato.Payloads.Response.OrderResponseDTO;
-import com.mercato.Payloads.Response.PaymentConfirmationResponseDTO;
+import com.mercato.Payloads.Response.PaymentRetryResponseDTO;
 import com.mercato.Service.OrderLineUpdateService;
 import com.mercato.Service.OrderService;
-import com.mercato.Service.SellerService;
 import com.mercato.Service.StripeService;
 import com.mercato.Utils.AuthUtil;
 import com.stripe.exception.StripeException;
-import com.stripe.model.PaymentIntent;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
@@ -29,28 +28,27 @@ public class OrderController {
     private final OrderService orderService;
     private final StripeService stripeService;
     private final OrderLineUpdateService orderLineUpdateService;
-    private final SellerService sellerService;
     private final AuthUtil authUtil;
 
     @PostMapping("/users/orders/capture")
-    public ResponseEntity<OrderResponseDTO> placeOrder(@RequestBody OrderCaptureRequestDTO orderCaptureRequestDTO) {
+    public ResponseEntity<OrderPlacementResponseDTO> placeOrder(@RequestBody OrderCaptureRequestDTO orderCaptureRequestDTO) {
 
-        OrderResponseDTO order = orderService.placeOrder(orderCaptureRequestDTO);
+        OrderPlacementResponseDTO order = orderService.placeOrder(orderCaptureRequestDTO);
         return new ResponseEntity<>(order, HttpStatus.CREATED);
     }
 
-    @PostMapping("/users/orders/create-payment-intent")
-    public ResponseEntity<String> createStripePaymentIntent(@RequestBody StripePaymentRequestDTO stripePaymentRequestDTO) throws StripeException {
-
-        PaymentIntent paymentIntent = stripeService.createStripePaymentIntent(stripePaymentRequestDTO);
-        return new ResponseEntity<>(paymentIntent.getClientSecret(), HttpStatus.CREATED);
+    @PostMapping(value = "/public/stripe/webhook", consumes = "application/json")
+    public ResponseEntity<String> handleWebhook(@RequestBody byte[] payload,
+                                                @RequestHeader("Stripe-Signature") String sigHeader) {
+        String payloadString = new String(payload, StandardCharsets.UTF_8);
+        stripeService.handleWebhookEvent(payloadString, sigHeader);
+        return ResponseEntity.ok("Webhook received");
     }
 
-    @PostMapping("/public/orders/payment-confirmation")
-    public ResponseEntity<PaymentConfirmationResponseDTO> confirmPayment(@RequestBody PaymentConfirmationRequestDTO paymentConfirmationRequestDTO) {
-
-        PaymentConfirmationResponseDTO paymentConfirmationResponseDTO = stripeService.confirmPayment(paymentConfirmationRequestDTO);
-        return new ResponseEntity<>(paymentConfirmationResponseDTO, HttpStatus.OK);
+    @PostMapping("/orders/{orderId}/retry-payment")
+    public ResponseEntity<PaymentRetryResponseDTO> retryPayment(@PathVariable String orderId) throws StripeException {
+        String clientSecret = orderService.retryPayment(orderId);
+        return ResponseEntity.ok(new PaymentRetryResponseDTO(clientSecret));
     }
 
     @GetMapping("/admin/orders")
@@ -92,15 +90,5 @@ public class OrderController {
     public ResponseEntity<OrderResponseDTO> cancelOrder(@RequestBody @Valid OrderCancelRequestDTO request) {
         OrderResponseDTO response = orderService.cancelOrder(request);
         return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/seller/fulfillment-orders")
-    public ResponseEntity<List<FulfillmentOrderResponseDTO>> getAllFulfillmentOrders() {
-        return ResponseEntity.ok(sellerService.getAllFulfillmentOrders());
-    }
-
-    @GetMapping("/seller/fulfillment-orders/{fulfillmentId}")
-    public ResponseEntity<FulfillmentOrderResponseDTO> getFulfillmentOrder(@PathVariable String fulfillmentId) {
-        return ResponseEntity.ok(sellerService.getFulfillmentOrder(fulfillmentId));
     }
 }

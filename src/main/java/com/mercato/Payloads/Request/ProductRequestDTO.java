@@ -12,7 +12,6 @@ public class ProductRequestDTO {
     private boolean active;
     private String imageUrl;
     private String description;
-    private Integer quantity;
     private BigDecimal retailPrice;
     private BigDecimal discountPercent;
 }

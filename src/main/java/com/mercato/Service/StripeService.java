@@ -1,18 +1,19 @@
 package com.mercato.Service;
 
+import com.mercato.Entity.EcommUser;
 import com.mercato.Entity.fulfillment.Order;
 import com.mercato.Entity.fulfillment.payment.PaymentMethod;
-import com.mercato.Payloads.Request.PaymentConfirmationRequestDTO;
-import com.mercato.Payloads.Request.StripePaymentRequestDTO;
-import com.mercato.Payloads.Response.PaymentConfirmationResponseDTO;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
 
 public interface StripeService {
 
-    PaymentIntent createStripePaymentIntent(StripePaymentRequestDTO stripePaymentRequestDTO) throws StripeException;
+    PaymentIntent createPaymentIntent(Order order, EcommUser user) throws StripeException;
 
-    void initiatePayment(Order order, PaymentMethod paymentMethod);
+    void cancelPaymentIntent(String paymentIntentId) throws StripeException;
 
-    PaymentConfirmationResponseDTO confirmPayment(PaymentConfirmationRequestDTO paymentConfirmationRequestDTO);
+    void initiatePayment(Order order, PaymentMethod paymentMethod,
+                         String paymentIntentId, String clientSecret);
+
+    void handleWebhookEvent(String payload, String sigHeader);
 }

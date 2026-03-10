@@ -1,6 +1,5 @@
 package com.mercato.Service;
 
-import com.mercato.Entity.Address;
 import com.mercato.Payloads.Request.AddressRequestDTO;
 import com.mercato.Payloads.Response.AddressResponseDTO;
 
@@ -18,6 +17,4 @@ public interface AddressService {
     AddressResponseDTO updateAddress(String addressId, AddressRequestDTO addressRequestDTO);
 
     void deleteAddress(String addressId);
-
-    Address getAddressById(String addressId);
 }

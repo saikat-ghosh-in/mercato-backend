@@ -11,9 +11,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Builder
 @Entity
@@ -98,7 +96,7 @@ public class OrderLine {
     @OneToMany(mappedBy = "orderLine", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("occurredAt DESC")
     @Builder.Default
-    private List<StateTransition> stateTransitions = new ArrayList<>();
+    private Set<StateTransition> stateTransitions = new HashSet<>();
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

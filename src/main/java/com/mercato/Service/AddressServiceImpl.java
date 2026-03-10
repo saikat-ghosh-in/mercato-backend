@@ -24,7 +24,7 @@ public class AddressServiceImpl implements AddressService {
     private final AuthUtil authUtil;
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public AddressResponseDTO createAddress(AddressRequestDTO addressRequestDTO) {
         EcommUser currentUser = authUtil.getLoggedInUser();
 
@@ -80,7 +80,7 @@ public class AddressServiceImpl implements AddressService {
             throw new IllegalStateException("Address is not associated with any user");
         }
         if (!address.getUser().getId().equals(currentUser.getId())) {
-            throw new AccessDeniedException("You cannot update this address");
+            throw new ForbiddenOperationException("You are not authorized to perform this action.");
         }
 
         address.setRecipientName(addressRequestDTO.getRecipientName());
@@ -105,14 +105,14 @@ public class AddressServiceImpl implements AddressService {
             throw new IllegalStateException("Address is not associated with any user");
         }
         if (!address.getUser().getId().equals(currentUser.getId())) {
-            throw new ForbiddenOperationException("You cannot delete this address");
+            throw new ForbiddenOperationException("You are not authorized to perform this action.");
         }
 
         currentUser.removeAddress(address);
     }
 
-    @Override
-    public Address getAddressById(String addressId) {
+
+    private Address getAddressById(String addressId) {
         return addressRepository.findByAddressId(addressId)
                 .orElseThrow(() -> new ResourceNotFoundException("Address", "addressId", addressId));
     }

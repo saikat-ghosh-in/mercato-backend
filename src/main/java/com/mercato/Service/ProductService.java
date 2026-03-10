@@ -1,8 +1,9 @@
 package com.mercato.Service;
 
-import com.mercato.Entity.Product;
+import com.mercato.Payloads.Request.ProductFilterRequestDTO;
 import com.mercato.Payloads.Request.ProductRequestDTO;
 import com.mercato.Payloads.Request.ProductSupplyUpdateRequestDTO;
+import com.mercato.Payloads.Request.SellerProductFilterRequestDTO;
 import com.mercato.Payloads.Response.ProductResponseDTO;
 import com.mercato.Payloads.Response.ProductResponse;
 import com.mercato.Payloads.Response.ProductSupplyUpdateResponseDTO;
@@ -15,7 +16,9 @@ public interface ProductService {
 
     ProductResponseDTO addProduct(String categoryId, ProductRequestDTO productRequestDTO);
 
-    ProductResponse getProducts(Integer pageNumber, Integer pageSize, String sortBy, String sortingOrder, String categoryName, String keyword);
+    ProductResponse getProducts(ProductFilterRequestDTO filter);
+
+    List<ProductResponseDTO> getSellerProducts(SellerProductFilterRequestDTO filter);
 
     ProductResponseDTO getProduct(String productId);
 
@@ -24,8 +27,6 @@ public interface ProductService {
     void deleteProduct(String productId);
 
     ProductResponseDTO uploadProductImage(String productId, MultipartFile image) throws IOException;
-
-    Product getProductByIdForUpdate(String productId);
 
     List<ProductSupplyUpdateResponseDTO> updateProductInventory(List<ProductSupplyUpdateRequestDTO> productSupplyUpdateRequestDTOs);
 

@@ -73,6 +73,9 @@ public class Payment {
     @Column(name = "gateway_response_message")
     private String gatewayResponseMessage;
 
+    @Column(name = "client_secret")
+    private String clientSecret;
+
     private Instant initiatedAt;
     private Instant completedAt;
 

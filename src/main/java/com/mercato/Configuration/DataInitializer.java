@@ -67,6 +67,7 @@ public class DataInitializer implements CommandLineRunner {
                 .accountLocked(false)
                 .emailVerified(true)
                 .roles(Set.of(adminRole))
+                .sellerDisplayName("Marcato Admin")
                 .build();
 
         userRepository.save(admin);
