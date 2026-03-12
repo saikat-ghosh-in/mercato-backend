@@ -1,16 +1,25 @@
 package com.mercato.ExceptionHandler;
 
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.NoHandlerFoundException;
+
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     // Generic exception handlers
-    @ExceptionHandler({Exception.class, IllegalStateException.class})
+    @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse> handleGeneric(Exception ex) {
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -24,37 +33,81 @@ public class GlobalExceptionHandler {
                 .body(new ApiResponse(ex.getMessage(), true));
     }
 
-    @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<ApiResponse> handleDataIntegrityViolation(
-            DataIntegrityViolationException ex) {
-        String message = "Invalid request data";
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse> handleValidation(MethodArgumentNotValidException ex) {
+        String fieldErrors = ex.getBindingResult().getFieldErrors().stream()
+                .map(e -> e.getField() + ": " + e.getDefaultMessage())
+                .collect(Collectors.joining(", "));
 
-        Throwable root = ex.getMostSpecificCause();
-        if (root.getMessage() != null) {
-            String cause = root.getMessage();
-            System.err.println(cause);
-            if (cause.contains("check_unique_gtin")) {
-                message = "Product with the given GTIN already exists";
-            } else if (cause.contains("violates not-null constraint")) {
-                String marker = "violates not-null constraint";
-                int index = cause.indexOf(marker);
-                if (index != -1) {
-                    message = cause.substring(0, index + marker.length()).trim();
-                    if (message.startsWith("ERROR:")) {
-                        message = message.substring(6).trim();
-                    }
-                }
-            } else if (cause.contains("check_product_id_min_len")) {
-                message = "productId must be more than 4 characters";
-            } else if (cause.contains("check_name_min_len")) {
-                message = "Product name must be more than 3 characters";
-            } else if (cause.contains("check_description_min_len")) {
-                message = "Product description must be more than 6 characters";
-            } else if (cause.contains("check_unit_price_min")) {
-                message = "Product unitPrice must be greater than 0";
-            } else if (cause.contains("check_mark_down_range")) {
-                message = "markDown must be between 0 and 99.99";
-            }
+        String message = fieldErrors.isEmpty()
+                ? ex.getBindingResult().getAllErrors().stream()
+                .map(DefaultMessageSourceResolvable::getDefaultMessage)
+                .collect(Collectors.joining(", "))
+                : fieldErrors;
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse(message, true));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse> handleNotReadable(HttpMessageNotReadableException ex) {
+        String message = ex.getCause() instanceof com.fasterxml.jackson.core.JsonParseException
+                ? "Malformed JSON request body"
+                : "Missing or unreadable request body";
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse(message, true));
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
+        String message = String.format("'%s' is not supported for '%s'", ex.getMethod(), request.getRequestURI());
+        return ResponseEntity
+                .status(HttpStatus.METHOD_NOT_ALLOWED)
+                .body(new ApiResponse(message, true));
+    }
+
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ApiResponse> handleNoHandlerFound(NoHandlerFoundException ex, HttpServletRequest request) {
+        String message = String.format("No endpoint found: '%s %s'", ex.getHttpMethod(), request.getRequestURI());
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(new ApiResponse(message, true));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        String cause = ex.getMostSpecificCause().getMessage();
+        if (cause == null) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(new ApiResponse("Data integrity violation", true));
+        }
+
+        String message;
+
+        if (cause.contains("violates not-null constraint")) {
+            message = extractBetween(cause, "null value in column \"", "\" of relation")
+                    .map(col -> "'" + toReadable(col) + "' is required")
+                    .orElse("A required field is missing");
+
+        } else if (cause.contains("violates unique constraint") || cause.contains("duplicate key")) {
+            message = extractBetween(cause, "Key (", ")=")
+                    .map(col -> "'" + toReadable(col) + "' already exists")
+                    .orElse("A duplicate value was provided");
+
+        } else if (cause.contains("violates check constraint")) {
+            message = extractBetween(cause, "violates check constraint \"", "\"")
+                    .map(col -> "Value violates constraint: " + toReadable(col))
+                    .orElse("A value constraint was violated");
+
+        } else if (cause.contains("violates foreign key constraint")) {
+            message = extractBetween(cause, "Key (", ")=")
+                    .map(col -> "Referenced '" + toReadable(col) + "' does not exist")
+                    .orElse("A referenced record does not exist");
+
+        } else {
+            message = "Data integrity violation";
         }
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
@@ -66,6 +119,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(ex.getStatus())
                 .body(new ApiResponse(ex.getMessage(), true));
+    }
+
+    private Optional<String> extractBetween(String source, String from, String to) {
+        int start = source.indexOf(from);
+        if (start == -1) return Optional.empty();
+        start += from.length();
+        int end = source.indexOf(to, start);
+        if (end == -1) return Optional.empty();
+        return Optional.of(source.substring(start, end).trim());
+    }
+
+    private String toReadable(String dbName) {
+        return dbName.replace("_fk", "").replace("_", " ");
     }
 }
 

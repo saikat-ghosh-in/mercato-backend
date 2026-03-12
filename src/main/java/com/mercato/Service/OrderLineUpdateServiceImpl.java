@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.MessageFormat;
-import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -147,7 +147,7 @@ public class OrderLineUpdateServiceImpl implements OrderLineUpdateService {
     }
 
     private void syncOrderStatus(Order order) {
-        List<OrderLine> lines = order.getOrderLines();
+        Set<OrderLine> lines = order.getOrderLines();
 
         boolean allCancelled = lines.stream()
                 .allMatch(l -> l.getOrderLineStatus() == OrderLineStatus.CANCELLED);

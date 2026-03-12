@@ -11,6 +11,9 @@ import java.time.Instant;
 @Entity
 @Table(
         name = "refunds",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_refund_refund_id", columnNames = "refund_id")
+        },
         indexes = {
                 @Index(name = "idx_refund_payment_fk", columnList = "payment_fk"),
                 @Index(name = "idx_refund_status", columnList = "status"),
@@ -31,6 +34,9 @@ public class Refund {
     @EqualsAndHashCode.Include
     private Long id;
 
+    @Column(name = "refund_id", nullable = false, updatable = false, length = 30)
+    private String refundId;
+
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "payment_fk", referencedColumnName = "id", nullable = false)
     private Payment payment;
@@ -49,6 +55,9 @@ public class Refund {
     private RefundStatus status;
 
     private String reason;
+
+    @Column(name = "gateway_response_message")
+    private String gatewayResponseMessage;
 
     @Column(name = "failure_reason")
     private String failureReason;

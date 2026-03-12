@@ -37,7 +37,7 @@ public class SellerServiceImpl implements SellerService {
         EcommUser seller = authUtil.getLoggedInUser();
 
         List<OrderLine> lines = orderLineRepository
-                .findAllBySeller(seller.getEmail());
+                .findAllBySellerEmail(seller.getEmail());
 
         return groupByFulfillmentId(lines);
     }

@@ -6,5 +6,5 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class PaymentRetryResponseDTO {
-    private String clientSecret;
+    private String paymentSessionId;
 }

@@ -6,15 +6,13 @@ import com.mercato.Entity.fulfillment.OrderLineStatus;
 import com.mercato.Entity.fulfillment.payment.Refund;
 import com.mercato.Entity.fulfillment.payment.RefundStatus;
 import com.mercato.Repository.RefundRepository;
-import com.stripe.exception.StripeException;
-import com.stripe.param.RefundCreateParams;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -22,6 +20,7 @@ import java.util.List;
 public class RefundServiceImpl implements RefundService {
 
     private final RefundRepository refundRepository;
+    private final CashfreeService cashfreeService;
 
     @Override
     @Transactional
@@ -38,9 +37,9 @@ public class RefundServiceImpl implements RefundService {
             return;
         }
 
-        String paymentIntentId = order.getPayment().getGatewayReference();
-        if (paymentIntentId == null) {
-            log.error("No Stripe payment intent found for order: {}", order.getOrderId());
+        String cfOrderId = order.getPayment().getCfOrderId();
+        if (cfOrderId == null) {
+            log.error("No Cashfree order ID found for order: {}", order.getOrderId());
             return;
         }
 
@@ -53,24 +52,19 @@ public class RefundServiceImpl implements RefundService {
                 .build();
 
         try {
-            long amountInPaise = refundAmount
-                    .multiply(BigDecimal.valueOf(100))
-                    .longValue();
+            String gatewayRefundId = cashfreeService.initiateRefund(
+                    order,
+                    cfOrderId,
+                    refundAmount
+            );
 
-            RefundCreateParams params = RefundCreateParams.builder()
-                    .setPaymentIntent(paymentIntentId)
-                    .setAmount(amountInPaise)
-                    .build();
+            refund.setGatewayReference(gatewayRefundId);
+            refund.setStatus(RefundStatus.PENDING);
 
-            com.stripe.model.Refund stripeRefund = com.stripe.model.Refund.create(params);
+            log.info("Refund initiated for order: {}, refundId: {}, amount: {}",
+                    order.getOrderId(), gatewayRefundId, refundAmount);
 
-            refund.setGatewayReference(stripeRefund.getId());
-            refund.setStatus(RefundStatus.SUCCESS);
-
-            log.info("Refund successful for order: {}, refundId: {}, amount: {}",
-                    order.getOrderId(), stripeRefund.getId(), refundAmount);
-
-        } catch (StripeException e) {
+        } catch (Exception e) {
             refund.setStatus(RefundStatus.FAILED);
             refund.setFailureReason(e.getMessage());
             log.error("Refund failed for order: {}, reason: {}",
@@ -80,9 +74,8 @@ public class RefundServiceImpl implements RefundService {
         refundRepository.save(refund);
     }
 
-
     private BigDecimal calculateRefundAmount(Order order) {
-        List<OrderLine> lines = order.getOrderLines();
+        Set<OrderLine> lines = order.getOrderLines();
 
         boolean nothingShipped = lines.stream()
                 .allMatch(l -> l.getShippedQty() == 0);

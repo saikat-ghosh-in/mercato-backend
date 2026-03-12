@@ -80,7 +80,7 @@ public class SpringSecurityConfig {
                                 .requestMatchers(HttpMethod.GET, "/images/**").permitAll()
                                 .requestMatchers("/api/seller/**").hasAnyRole("SELLER", "ADMIN")
                                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                                .requestMatchers("/api/public/stripe/webhook").permitAll()
+                                .requestMatchers("/api/public/cashfree/webhook").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())

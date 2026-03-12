@@ -5,7 +5,7 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public class OrderPlacementResponseDTO {
+public class CashfreeOrderResponse {
+    private final String cfOrderId;
     private final String paymentSessionId;
-    private final OrderResponseDTO order;
 }

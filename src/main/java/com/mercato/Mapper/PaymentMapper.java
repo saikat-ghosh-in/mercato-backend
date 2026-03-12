@@ -15,6 +15,7 @@ public class PaymentMapper {
                 payment.getGatewayReference(),
                 payment.getGatewayName(),
                 payment.getGatewayResponseMessage(),
+                payment.getCfOrderId(),
                 payment.getInitiatedAt(),
                 payment.getCompletedAt()
         );

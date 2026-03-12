@@ -2,22 +2,17 @@ package com.mercato.Controller;
 
 import com.mercato.Entity.fulfillment.TransitionTrigger;
 import com.mercato.Payloads.Request.*;
-import com.mercato.Payloads.Response.OrderLineResponseDTO;
-import com.mercato.Payloads.Response.OrderPlacementResponseDTO;
-import com.mercato.Payloads.Response.OrderResponseDTO;
-import com.mercato.Payloads.Response.PaymentRetryResponseDTO;
+import com.mercato.Payloads.Response.*;
+import com.mercato.Service.CashfreeService;
 import com.mercato.Service.OrderLineUpdateService;
 import com.mercato.Service.OrderService;
-import com.mercato.Service.StripeService;
 import com.mercato.Utils.AuthUtil;
-import com.stripe.exception.StripeException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
@@ -26,29 +21,35 @@ import java.util.List;
 public class OrderController {
 
     private final OrderService orderService;
-    private final StripeService stripeService;
+    private final CashfreeService cashfreeService;
     private final OrderLineUpdateService orderLineUpdateService;
     private final AuthUtil authUtil;
 
-    @PostMapping("/users/orders/capture")
+    @PostMapping("/orders/capture")
     public ResponseEntity<OrderPlacementResponseDTO> placeOrder(@RequestBody OrderCaptureRequestDTO orderCaptureRequestDTO) {
 
         OrderPlacementResponseDTO order = orderService.placeOrder(orderCaptureRequestDTO);
         return new ResponseEntity<>(order, HttpStatus.CREATED);
     }
 
-    @PostMapping(value = "/public/stripe/webhook", consumes = "application/json")
-    public ResponseEntity<String> handleWebhook(@RequestBody byte[] payload,
-                                                @RequestHeader("Stripe-Signature") String sigHeader) {
-        String payloadString = new String(payload, StandardCharsets.UTF_8);
-        stripeService.handleWebhookEvent(payloadString, sigHeader);
+    @PostMapping(value = "/public/cashfree/webhook", consumes = "application/json")
+    public ResponseEntity<String> handleWebhook(
+            @RequestBody String payload,
+            @RequestHeader("x-webhook-signature") String signature,
+            @RequestHeader("x-webhook-timestamp") String timestamp) {
+        cashfreeService.handleWebhookEvent(payload, signature, timestamp);
         return ResponseEntity.ok("Webhook received");
     }
 
     @PostMapping("/orders/{orderId}/retry-payment")
-    public ResponseEntity<PaymentRetryResponseDTO> retryPayment(@PathVariable String orderId) throws StripeException {
-        String clientSecret = orderService.retryPayment(orderId);
-        return ResponseEntity.ok(new PaymentRetryResponseDTO(clientSecret));
+    public ResponseEntity<PaymentRetryResponseDTO> retryPayment(@PathVariable String orderId) {
+        String paymentSessionId = orderService.retryPayment(orderId);
+        return ResponseEntity.ok(new PaymentRetryResponseDTO(paymentSessionId));
+    }
+
+    @PostMapping("/orders/{orderId}/verify-payment")
+    public ResponseEntity<String> verifyPayment(@PathVariable String orderId) {
+        return ResponseEntity.ok(cashfreeService.verifyAndSyncPayment(orderId));
     }
 
     @GetMapping("/admin/orders")
@@ -70,6 +71,11 @@ public class OrderController {
 
         OrderResponseDTO order = orderService.getCurrentUserOrder(orderId);
         return new ResponseEntity<>(order, HttpStatus.OK);
+    }
+
+    @GetMapping("/users/orders/summary")
+    public ResponseEntity<List<OrderSummaryDTO>> getCurrentUserOrderSummaries() {
+        return ResponseEntity.ok(orderService.getCurrentUserOrderSummaries());
     }
 
     @GetMapping("/admin/orders/{orderId}")

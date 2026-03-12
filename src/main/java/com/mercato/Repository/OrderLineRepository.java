@@ -2,9 +2,7 @@ package com.mercato.Repository;
 
 import com.mercato.Entity.fulfillment.OrderLine;
 import jakarta.persistence.LockModeType;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Lock;
-import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
@@ -20,7 +18,6 @@ public interface OrderLineRepository extends JpaRepository<OrderLine, Long> {
     @Query("""
             SELECT ol FROM OrderLine ol
             LEFT JOIN FETCH ol.order
-            LEFT JOIN FETCH ol.stateTransitions
             WHERE ol.fulfillmentId = :fulfillmentId
             AND ol.orderLineNumber = :orderLineNumber
             """)
@@ -29,26 +26,12 @@ public interface OrderLineRepository extends JpaRepository<OrderLine, Long> {
             @Param("orderLineNumber") int orderLineNumber
     );
 
-    @Query("""
-            SELECT ol FROM OrderLine ol
-            LEFT JOIN FETCH ol.stateTransitions
-            LEFT JOIN FETCH ol.order
-            WHERE ol.sellerEmail = :sellerEmail
-            """)
-    List<OrderLine> findAllBySeller(@Param("sellerEmail") String sellerEmail);
+    @EntityGraph(attributePaths = {"order", "stateTransitions"})
+    List<OrderLine> findAllBySellerEmail(String sellerEmail);
 
-    @Query("""
-            SELECT ol FROM OrderLine ol
-            LEFT JOIN FETCH ol.stateTransitions
-            LEFT JOIN FETCH ol.order
-            WHERE ol.fulfillmentId = :fulfillmentId
-            AND ol.sellerEmail = :sellerEmail
-            """)
-    List<OrderLine> findAllByFulfillmentIdAndSellerEmail(
-            @Param("fulfillmentId") String fulfillmentId,
-            @Param("sellerEmail") String sellerEmail
-    );
-    
+    @EntityGraph(attributePaths = {"order", "stateTransitions"})
+    List<OrderLine> findAllByFulfillmentIdAndSellerEmail(String fulfillmentId, String sellerEmail);
+
     @Query("""
             SELECT COALESCE(SUM(ol.unitPrice * ol.shippedQty), 0)
             FROM OrderLine ol
@@ -65,9 +48,9 @@ public interface OrderLineRepository extends JpaRepository<OrderLine, Long> {
             AND ol.updatedAt >= :start AND ol.updatedAt < :end
             """)
     BigDecimal findRevenueBySellerBetween(@Param("sellerEmail") String sellerEmail,
-                                               @Param("start") Instant start,
-                                               @Param("end") Instant end);
-    
+                                          @Param("start") Instant start,
+                                          @Param("end") Instant end);
+
     @Query("""
             SELECT COUNT(DISTINCT ol.order.id)
             FROM OrderLine ol
@@ -93,7 +76,7 @@ public interface OrderLineRepository extends JpaRepository<OrderLine, Long> {
             )
             """)
     BigDecimal findAverageOrderValueBySeller(@Param("sellerEmail") String sellerEmail);
-    
+
     @Query("""
             SELECT ol.productId, ol.productName,
                    SUM(ol.shippedQty) AS totalShippedQty,
@@ -105,7 +88,7 @@ public interface OrderLineRepository extends JpaRepository<OrderLine, Long> {
             ORDER BY totalShippedQty DESC
             """)
     List<Object[]> findTopSellingProductsBySeller(@Param("sellerEmail") String sellerEmail);
-    
+
     @Query("""
             SELECT ol.orderLineStatus, COUNT(ol)
             FROM OrderLine ol

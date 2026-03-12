@@ -1,15 +1,18 @@
 package com.mercato.Mapper;
 
 import com.mercato.Entity.fulfillment.Order;
+import com.mercato.Entity.fulfillment.OrderLine;
 import com.mercato.Payloads.Response.OrderLineResponseDTO;
 import com.mercato.Payloads.Response.OrderResponseDTO;
 
+import java.util.Comparator;
 import java.util.List;
 
 public class OrderMapper {
 
     public static OrderResponseDTO toDto(Order order) {
         List<OrderLineResponseDTO> orderLineDTOs = order.getOrderLines().stream()
+                .sorted(Comparator.comparing(OrderLine::getOrderLineNumber))
                 .map(OrderLineMapper::toDto)
                 .toList();
 

@@ -73,8 +73,11 @@ public class Payment {
     @Column(name = "gateway_response_message")
     private String gatewayResponseMessage;
 
-    @Column(name = "client_secret")
-    private String clientSecret;
+    @Column(name = "cf_order_id", length = 100)
+    private String cfOrderId;
+
+    @Column(name = "payment_session_id")
+    private String paymentSessionId;
 
     private Instant initiatedAt;
     private Instant completedAt;

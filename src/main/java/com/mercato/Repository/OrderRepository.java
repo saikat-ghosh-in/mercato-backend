@@ -1,6 +1,8 @@
 package com.mercato.Repository;
 
 import com.mercato.Entity.fulfillment.Order;
+import com.mercato.Payloads.Response.OrderSummaryDTO;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,31 +14,22 @@ import java.util.Optional;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
-    @Query("""
-            SELECT o FROM Order o
-            LEFT JOIN FETCH o.orderLines ol
-            LEFT JOIN FETCH ol.stateTransitions
-            WHERE o.orderId = :orderId
-            """)
-    Optional<Order> findByOrderIdWithLines(String orderId);
+    @EntityGraph(attributePaths = {"orderLines", "orderLines.stateTransitions"})
+    Optional<Order> findByOrderId(String orderId);
+
+    @EntityGraph(attributePaths = {"orderLines", "orderLines.stateTransitions"})
+    Optional<Order> findByOrderIdAndCustomerEmail(String orderId, String email);
+
+    @EntityGraph(attributePaths = {"orderLines", "orderLines.stateTransitions"})
+    List<Order> findByCustomerEmail(String email);
 
     @Query("""
-            SELECT o FROM Order o
-            LEFT JOIN FETCH o.orderLines ol
-            LEFT JOIN FETCH ol.stateTransitions
+            SELECT new com.mercato.Payloads.Response.OrderSummaryDTO(
+                o.orderId, o.orderStatus, o.totalAmount, o.createdAt
+            )
+            FROM Order o
             WHERE o.customerEmail = :email
+            ORDER BY o.createdAt DESC
             """)
-    List<Order> findAllByCustomerEmailWithLines(String email);
-
-    @Query("""
-            SELECT o FROM Order o
-            LEFT JOIN FETCH o.orderLines ol
-            LEFT JOIN FETCH ol.stateTransitions
-            WHERE o.orderId = :orderId
-            AND o.customerEmail = :email
-            """)
-    Optional<Order> findByOrderIdAndCustomerEmailWithLines(
-            @Param("orderId") String orderId,
-            @Param("email") String email
-    );
+    List<OrderSummaryDTO> findOrderSummariesByCustomerEmail(@Param("email") String email);
 }

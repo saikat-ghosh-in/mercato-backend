@@ -10,10 +10,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Entity
 @Table(
@@ -77,10 +74,10 @@ public class Order {
     private String deliveryPincode;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OrderLine> orderLines = new ArrayList<>();
+    private Set<OrderLine> orderLines = new HashSet<>();
 
     @Column(length = 3, nullable = false, updatable = false)
-    private String currency; // INR
+    private String currency;
 
     @Column(nullable = false, precision = 15, scale = 2, updatable = false)
     private BigDecimal subtotal;
@@ -107,16 +104,6 @@ public class Order {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-
-    @PrePersist
-    private void prePersist() {
-        if (this.orderId == null) {
-            String datePart = LocalDate.now().toString().replace("-", "");
-            String randomPart = UUID.randomUUID().toString().replace("-", "")
-                    .substring(0, 12).toUpperCase();
-            this.orderId = "ORD-" + datePart + "-" + randomPart;
-        }
-    }
 
     public void attachPayment(Payment payment) {
         if (this.orderStatus != OrderStatus.CREATED) {

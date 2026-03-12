@@ -13,17 +13,16 @@ import com.mercato.ExceptionHandler.ResourceNotFoundException;
 import com.mercato.Mapper.OrderMapper;
 import com.mercato.Payloads.Request.OrderCancelRequestDTO;
 import com.mercato.Payloads.Request.OrderLineUpdateRequestDTO;
+import com.mercato.Payloads.Response.CashfreeOrderResponse;
 import com.mercato.Payloads.Response.OrderPlacementResponseDTO;
 import com.mercato.Payloads.Response.OrderResponseDTO;
 import com.mercato.Payloads.Request.OrderCaptureRequestDTO;
+import com.mercato.Payloads.Response.OrderSummaryDTO;
 import com.mercato.Repository.AddressRepository;
 import com.mercato.Repository.OrderRepository;
-import com.mercato.Repository.PaymentRepository;
 import com.mercato.Repository.ProductRepository;
 import com.mercato.Utils.AuthUtil;
 import com.mercato.Utils.CartContext;
-import com.stripe.exception.StripeException;
-import com.stripe.model.PaymentIntent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,10 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -43,17 +39,16 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final CartService cartService;
-    private final StripeService stripeService;
+    private final CashfreeService cashfreeService;
     private final AddressRepository addressRepository;
     private final AuthUtil authUtil;
     private final CartReservationService cartReservationService;
     private final ProductRepository productRepository;
-    private final PaymentRepository paymentRepository;
     private final OrderLineUpdateService orderLineUpdateService;
 
     @Override
     @Transactional
-    public OrderPlacementResponseDTO placeOrder(OrderCaptureRequestDTO orderCaptureRequestDTO) {
+    public OrderPlacementResponseDTO placeOrder(OrderCaptureRequestDTO request) {
         EcommUser user = authUtil.getLoggedInUser();
         Cart cart = cartService.getCartByUser(user);
 
@@ -61,7 +56,18 @@ public class OrderServiceImpl implements OrderService {
             throw new CustomBadRequestException("Cart is empty");
         }
 
-        Order order = buildOrder(cart, orderCaptureRequestDTO, user);
+        Address address = addressRepository.findByAddressId(request.getAddressId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Address", "addressId", request.getAddressId())
+                );
+        Order order = buildOrder(cart, user, address);
+
+        CashfreeOrderResponse cashfreeOrder = cashfreeService.createOrder(order, user);
+        cashfreeService.initiatePayment(
+                order,
+                PaymentMethod.getFromString(request.getPaymentMethod()),
+                cashfreeOrder
+        );
 
         cart.getCartItems().forEach(this::clearCartReservationAndValidateStock);
         orderRepository.save(order);
@@ -69,101 +75,24 @@ public class OrderServiceImpl implements OrderService {
         CartContext context = new CartContext(user.getUserId(), null);
         cartService.clearCart(context);
 
-        try {
-            PaymentIntent paymentIntent = stripeService.createPaymentIntent(order, user);
-            stripeService.initiatePayment(
-                    order,
-                    PaymentMethod.getFromString(orderCaptureRequestDTO.getPaymentMethod()),
-                    paymentIntent.getId(),
-                    paymentIntent.getClientSecret()
-            );
-        } catch (StripeException e) {
-            throw new CustomBadRequestException(
-                    "Payment initiation failed: " + e.getMessage()
-            );
-        }
-
         return new OrderPlacementResponseDTO(
-                order.getPayment().getClientSecret(),
+                order.getPayment().getPaymentSessionId(),
                 OrderMapper.toDto(order)
         );
     }
 
     @Override
     @Transactional
-    public String retryPayment(String orderId) throws StripeException {
+    public String retryPayment(String orderId) {
         EcommUser currentUser = authUtil.getLoggedInUser();
-        Order order = orderRepository.findByOrderIdAndCustomerEmailWithLines(orderId, currentUser.getEmail())
+        Order order = orderRepository.findByOrderIdAndCustomerEmail(orderId, currentUser.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "orderId", orderId));
 
         if (!OrderStatus.CREATED.equals(order.getOrderStatus())) {
             throw new CustomBadRequestException("Order is not in a payable state");
         }
 
-        Payment payment = order.getPayment();
-
-        if (payment == null) {
-            throw new CustomBadRequestException("No payment found for this order");
-        }
-
-        if (PaymentStatus.SUCCESS.equals(payment.getStatus())) {
-            throw new CustomBadRequestException("Order is already paid");
-        }
-
-        String stripeStatus = PaymentIntent.retrieve(payment.getGatewayReference()).getStatus();
-
-        if ("requires_payment_method".equals(stripeStatus) || "requires_confirmation".equals(stripeStatus)) {
-            return payment.getClientSecret();
-        }
-
-        if ("canceled".equals(stripeStatus)) {
-            PaymentIntent newIntent = stripeService.createPaymentIntent(order, currentUser);
-            payment.setStatus(PaymentStatus.INITIATED);
-            payment.setGatewayReference(newIntent.getId());
-            payment.setClientSecret(newIntent.getClientSecret());
-            payment.setGatewayResponseMessage(null);
-            payment.setCompletedAt(null);
-            payment.setInitiatedAt(Instant.now());
-            paymentRepository.save(payment);
-            return newIntent.getClientSecret();
-        }
-
-        throw new CustomBadRequestException("Payment cannot be retried at this time, stripe status: " + stripeStatus);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<OrderResponseDTO> getAllOrders() {
-        return orderRepository.findAll().stream()
-                .map(OrderMapper::toDto)
-                .toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<OrderResponseDTO> getCurrentUserOrders() {
-        EcommUser currentUser = authUtil.getLoggedInUser();
-        return orderRepository.findAllByCustomerEmailWithLines(currentUser.getEmail())
-                .stream()
-                .map(OrderMapper::toDto)
-                .toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public OrderResponseDTO getCurrentUserOrder(String orderId) {
-        EcommUser currentUser = authUtil.getLoggedInUser();
-        Order order = orderRepository.findByOrderIdAndCustomerEmailWithLines(orderId, currentUser.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("Order", "orderId", orderId));
-        return OrderMapper.toDto(order);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public OrderResponseDTO getOrder(String orderId) {
-        Order order = orderRepository.findByOrderIdWithLines(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order", "orderId", orderId));
-        return OrderMapper.toDto(order);
+        return cashfreeService.retryPayment(order, currentUser);
     }
 
     @Override
@@ -173,28 +102,25 @@ public class OrderServiceImpl implements OrderService {
 
         Order order;
         if (trigger == TransitionTrigger.ADMIN) {
-            order = orderRepository.findByOrderIdWithLines(request.getOrderId())
+            order = orderRepository.findByOrderId(request.getOrderId())
                     .orElseThrow(() -> new ResourceNotFoundException("Order", "orderId", request.getOrderId()));
         } else {
             EcommUser currentUser = authUtil.getLoggedInUser();
-            order = orderRepository.findByOrderIdAndCustomerEmailWithLines(
+            order = orderRepository.findByOrderIdAndCustomerEmail(
                             request.getOrderId(), currentUser.getEmail()
                     )
                     .orElseThrow(() -> new ResourceNotFoundException("Order", "orderId", request.getOrderId()));
         }
 
         Payment payment = order.getPayment();
+
         if (!PaymentStatus.SUCCESS.equals(payment.getStatus())) {
             if (PaymentStatus.CANCELLED.equals(payment.getStatus())) {
                 throw new CustomBadRequestException("Order is already cancelled");
             }
-            try {
-                stripeService.cancelPaymentIntent(payment.getGatewayReference());
-            } catch (StripeException e) {
-                log.warn("Failed to cancel PaymentIntent on Stripe: {}", e.getMessage());
-            }
+            cashfreeService.terminateOrder(payment.getCfOrderId());
             payment.setStatus(PaymentStatus.CANCELLED);
-            payment.setGatewayResponseMessage("Cancelled by user before payment");
+            payment.setGatewayResponseMessage("Cancelled before payment");
             order.setOrderStatus(OrderStatus.CANCELLED);
             orderRepository.save(order);
             return OrderMapper.toDto(order);
@@ -224,23 +150,63 @@ public class OrderServiceImpl implements OrderService {
             }
         });
 
-        Order updatedOrder = orderRepository.findByOrderIdWithLines(request.getOrderId())
-                .orElseThrow(() -> new ResourceNotFoundException("Order", "orderId", request.getOrderId()));
+        return OrderMapper.toDto(
+                orderRepository.findByOrderId(request.getOrderId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Order", "orderId", request.getOrderId()))
+        );
+    }
 
-        return OrderMapper.toDto(updatedOrder);
+    @Override
+    @Transactional(readOnly = true)
+    public List<OrderResponseDTO> getAllOrders() {
+        return orderRepository.findAll().stream()
+                .map(OrderMapper::toDto)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<OrderResponseDTO> getCurrentUserOrders() {
+        EcommUser currentUser = authUtil.getLoggedInUser();
+        return orderRepository.findByCustomerEmail(currentUser.getEmail())
+                .stream()
+                .map(OrderMapper::toDto)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public OrderResponseDTO getCurrentUserOrder(String orderId) {
+        EcommUser currentUser = authUtil.getLoggedInUser();
+        Order order = orderRepository.findByOrderIdAndCustomerEmail(orderId, currentUser.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "orderId", orderId));
+        return OrderMapper.toDto(order);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<OrderSummaryDTO> getCurrentUserOrderSummaries() {
+        EcommUser currentUser = authUtil.getLoggedInUser();
+        return orderRepository.findOrderSummariesByCustomerEmail(currentUser.getEmail());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public OrderResponseDTO getOrder(String orderId) {
+        Order order = orderRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "orderId", orderId));
+        return OrderMapper.toDto(order);
     }
 
 
     private void clearCartReservationAndValidateStock(CartItem cartItem) {
         cartReservationService.release(cartItem);
-
         Product product = productRepository.findByProductIdForUpdate(
                         cartItem.getProduct().getProductId()
                 )
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Product", "productId", cartItem.getProduct().getProductId()
                 ));
-
         if (product.getAvailableQty() < cartItem.getQuantity()) {
             throw new InsufficientInventoryException(
                     product.getProductName(), product.getAvailableQty()
@@ -248,18 +214,14 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    private Order buildOrder(Cart cart, OrderCaptureRequestDTO orderCaptureRequestDTO, EcommUser customer) {
-        List<CartItem> cartItems = cart.getCartItems();
+    private Order buildOrder(Cart cart, EcommUser customer, Address address) {
+        Set<CartItem> cartItems = cart.getCartItems();
 
         Order order = new Order();
+        order.setOrderId(generateOrderId());
         order.setCustomerName(customer.getUsername());
         order.setCustomerEmail(customer.getEmail());
         order.setOrderStatus(OrderStatus.CREATED);
-
-        Address address = addressRepository.findByAddressId(orderCaptureRequestDTO.getAddressId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Address", "addressId", orderCaptureRequestDTO.getAddressId())
-                );
         order.setRecipientName(address.getRecipientName());
         order.setRecipientPhone(address.getRecipientPhone());
         order.setDeliveryAddressLine1(address.getAddressLine1());
@@ -299,6 +261,13 @@ public class OrderServiceImpl implements OrderService {
         order.setTotalAmount(order.getSubtotal().add(order.getCharges()));
 
         return order;
+    }
+
+    private String generateOrderId() {
+        String datePart = LocalDate.now().toString().replace("-", "");
+        String randomPart = UUID.randomUUID().toString().replace("-", "")
+                .substring(0, 12).toUpperCase();
+        return "ORD-" + datePart + "-" + randomPart;
     }
 
     private String generateFulfillmentId() {

@@ -115,7 +115,7 @@ public class CartServiceImpl implements CartService {
     @Transactional
     public void mergeGuestCartOnLogin(String userId, String guestToken) {
         Optional<Cart> guestCartOpt =
-                cartRepository.findCartWithItemsByGuestToken(guestToken);
+                cartRepository.findByGuestToken(guestToken);
         if (guestCartOpt.isEmpty()) return;
 
         Cart guestCart = guestCartOpt.get();
@@ -152,7 +152,7 @@ public class CartServiceImpl implements CartService {
 
     @Override
     public Cart getCartByUser(EcommUser user) {
-        Cart cart = cartRepository.findCartWithItemsByUserId(user.getUserId()).orElse(null);
+        Cart cart = cartRepository.findByUser_UserId(user.getUserId()).orElse(null);
         if (cart == null) return null;
         cartPricingService.applyCharges(cart);
         return cart;
@@ -177,11 +177,11 @@ public class CartServiceImpl implements CartService {
 
     private Cart resolveCart(CartContext context) {
         if (!context.isGuest()) {
-            return cartRepository.findCartWithItemsByUserId(context.userId())
+            return cartRepository.findByUser_UserId(context.userId())
                     .orElseGet(() -> createUserCart(context.userId()));
         }
         if (context.guestToken() != null) {
-            return cartRepository.findCartWithItemsByGuestToken(context.guestToken())
+            return cartRepository.findByGuestToken(context.guestToken())
                     .orElseGet(() -> createGuestCart(context.guestToken()));
         }
         throw new IllegalStateException("Cannot resolve cart: no userId or guestToken");

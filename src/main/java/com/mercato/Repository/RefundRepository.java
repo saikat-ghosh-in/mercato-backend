@@ -10,7 +10,7 @@ import java.util.Optional;
 @Repository
 public interface RefundRepository extends JpaRepository<Refund, Long> {
 
-    Optional<Refund> findByPayment_GatewayReference(String gatewayReference);
+    Optional<Refund> findByGatewayReference(String gatewayReference);
 
     boolean existsByPayment_Id(Long paymentId);
 }

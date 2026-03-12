@@ -48,7 +48,7 @@ public class Cart {
             orphanRemoval = true
     )
     @Builder.Default
-    private List<CartItem> cartItems = new ArrayList<>();
+    private Set<CartItem> cartItems = new HashSet<>();
 
     @OneToMany(
             mappedBy = "cart",
@@ -135,10 +135,10 @@ public class Cart {
         item.updateQuantity(quantity);
     }
 
-    public void addCartItem(CartItem cartItem) {
+    private void addCartItem(CartItem cartItem) {
         if (cartItem == null) return;
-        cartItems.add(cartItem);
         cartItem.setCart(this);
+        cartItems.add(cartItem);
     }
 
     public void removeCartItem(CartItem cartItem) {

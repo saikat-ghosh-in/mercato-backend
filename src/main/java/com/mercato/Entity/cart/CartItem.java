@@ -15,7 +15,7 @@ import java.math.RoundingMode;
                 @UniqueConstraint(name = "uk_cart_item_cart_product", columnNames = {"cart_fk", "product_fk"})
         },
         indexes = {
-                @Index(name = "idx_cart_item_cart_fk",    columnList = "cart_fk"),
+                @Index(name = "idx_cart_item_cart_fk", columnList = "cart_fk"),
                 @Index(name = "idx_cart_item_product_fk", columnList = "product_fk")
         }
 )

@@ -11,14 +11,6 @@ public class CartMapper {
 
     public static CartResponseDTO toDto(Cart cart) {
         if (cart == null) return null;
-        List<CartItemResponseDTO> items = cart.getCartItems().stream()
-                .map(cartItem -> new CartItemResponseDTO(
-                        cartItem.getProduct().getProductId(),
-                        cartItem.getQuantity(),
-                        cartItem.getItemPrice(),
-                        cartItem.getLineTotal(),
-                        cartItem.isOutOfStock()
-                )).toList();
         return new CartResponseDTO(
                 cart.getCartId(),
                 cart.getSubtotal(),
@@ -30,7 +22,14 @@ public class CartMapper {
                         )).toList(),
                 cart.getTotalCharges(),
                 cart.getTotal(),
-                items
+                cart.getCartItems().stream()
+                        .map(cartItem -> new CartItemResponseDTO(
+                                cartItem.getProduct().getProductId(),
+                                cartItem.getQuantity(),
+                                cartItem.getItemPrice(),
+                                cartItem.getLineTotal(),
+                                cartItem.isOutOfStock()
+                        )).toList()
         );
     }
 }

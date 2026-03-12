@@ -8,13 +8,16 @@ public class RefundMapper {
     public static RefundResponseDTO toDto(Refund refund) {
         if (refund == null) return null;
         return new RefundResponseDTO(
+                refund.getRefundId(),
                 refund.getGatewayReference(),
                 refund.getAmount(),
                 refund.getCurrency(),
                 refund.getStatus().toString(),
                 refund.getReason(),
+                refund.getGatewayResponseMessage(),
                 refund.getFailureReason(),
-                refund.getCreatedAt()
+                refund.getCreatedAt(),
+                refund.getUpdatedAt()
         );
     }
 }
