@@ -268,18 +268,17 @@ public class CashfreeServiceImpl implements CashfreeService {
 
     @Override
     @Transactional
-    public String initiateRefund(Order order, String cfOrderId, BigDecimal amount) {
-        String refundId = "RFD-" + order.getOrderId() + "-" + UUID.randomUUID().toString()
-                .replace("-", "").substring(0, 8).toUpperCase();
+    public String initiateRefund(Order order, Refund refund) {
 
         Map<String, Object> body = new HashMap<>();
-        body.put("refund_amount", amount);
-        body.put("refund_id", refundId);
+        body.put("refund_amount", refund.getAmount());
+        body.put("refund_id", refund.getRefundId());
         body.put("refund_note", "Order cancellation - " + order.getOrderId());
+        body.put("refund_speed","STANDARD");
 
         try {
             ResponseEntity<String> response = restTemplate.exchange(
-                    baseUrl + "/orders/" + cfOrderId + "/refunds",
+                    baseUrl + "/orders/" + order.getOrderId() + "/refunds",
                     HttpMethod.POST,
                     new HttpEntity<>(body, buildHeaders()),
                     String.class
@@ -288,21 +287,11 @@ public class CashfreeServiceImpl implements CashfreeService {
             JsonNode json = objectMapper.readTree(response.getBody());
             String cfRefundId = json.get("cf_refund_id").asText();
 
-            Refund refund = Refund.builder()
-                    .payment(order.getPayment())
-                    .gatewayReference(cfRefundId)
-                    .amount(amount)
-                    .currency(order.getCurrency())
-                    .status(RefundStatus.PENDING)
-                    .reason("Order cancellation")
-                    .build();
-
-            refundRepository.save(refund);
-            log.info("Refund initiated for cfOrderId={}, cfRefundId={}, amount={}",
-                    cfOrderId, cfRefundId, amount);
+            log.info("Refund initiated for orderId={}, cfRefundId={}, amount={}",
+                    order.getOrderId(), cfRefundId, refund.getRefundId());
             return cfRefundId;
         } catch (Exception e) {
-            log.error("Failed to initiate refund for cfOrderId={}: {}", cfOrderId, e.getMessage());
+            log.error("Failed to initiate refund for orderId={}: {}", order.getOrderId(), e.getMessage());
             throw new CustomBadRequestException("Refund initiation failed: " + e.getMessage());
         }
     }

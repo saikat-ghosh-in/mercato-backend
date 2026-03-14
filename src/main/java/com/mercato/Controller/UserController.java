@@ -30,13 +30,13 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
-    @GetMapping("/users/username")
+    @GetMapping("/user/username")
     public ResponseEntity<String> getUsernameFromAuthentication(Authentication authentication) {
         String username = authService.getCurrentUsernameFromAuthentication();
         return ResponseEntity.ok(username);
     }
 
-    @GetMapping("/users/user")
+    @GetMapping("/user")
     public ResponseEntity<EcommUserResponseDTO> getCurrentUserFromAuthentication() {
         EcommUserResponseDTO user = authService.getCurrentUserFromAuthentication();
         return ResponseEntity.ok(user);

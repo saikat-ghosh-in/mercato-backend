@@ -59,21 +59,21 @@ public class OrderController {
         return new ResponseEntity<>(orders, HttpStatus.OK);
     }
 
-    @GetMapping("/users/orders")
+    @GetMapping("/user/orders")
     public ResponseEntity<List<OrderResponseDTO>> getCurrentUserOrders() {
 
         List<OrderResponseDTO> orders = orderService.getCurrentUserOrders();
         return new ResponseEntity<>(orders, HttpStatus.OK);
     }
 
-    @GetMapping("/users/orders/{orderId}")
+    @GetMapping("/user/orders/{orderId}")
     public ResponseEntity<OrderResponseDTO> getCurrentUserOrder(@PathVariable String orderId) {
 
         OrderResponseDTO order = orderService.getCurrentUserOrder(orderId);
         return new ResponseEntity<>(order, HttpStatus.OK);
     }
 
-    @GetMapping("/users/orders/summary")
+    @GetMapping("/user/orders/summary")
     public ResponseEntity<List<OrderSummaryDTO>> getCurrentUserOrderSummaries() {
         return ResponseEntity.ok(orderService.getCurrentUserOrderSummaries());
     }
@@ -92,7 +92,7 @@ public class OrderController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/users/orders/cancel")
+    @PostMapping("/user/orders/cancel")
     public ResponseEntity<OrderResponseDTO> cancelOrder(@RequestBody @Valid OrderCancelRequestDTO request) {
         OrderResponseDTO response = orderService.cancelOrder(request);
         return ResponseEntity.ok(response);

@@ -10,6 +10,7 @@ import java.util.List;
 @Getter
 @AllArgsConstructor
 public class OrderLineResponseDTO {
+    private final String fulfillmentId;
     private final String orderId;
     private final int orderLineNumber;
     private final String orderLineStatus;

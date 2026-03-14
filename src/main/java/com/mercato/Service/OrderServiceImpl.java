@@ -107,17 +107,37 @@ public class OrderServiceImpl implements OrderService {
         } else {
             EcommUser currentUser = authUtil.getLoggedInUser();
             order = orderRepository.findByOrderIdAndCustomerEmail(
-                            request.getOrderId(), currentUser.getEmail()
-                    )
+                            request.getOrderId(), currentUser.getEmail())
                     .orElseThrow(() -> new ResourceNotFoundException("Order", "orderId", request.getOrderId()));
         }
 
         Payment payment = order.getPayment();
 
-        if (!PaymentStatus.SUCCESS.equals(payment.getStatus())) {
-            if (PaymentStatus.CANCELLED.equals(payment.getStatus())) {
-                throw new CustomBadRequestException("Order is already cancelled");
+        if (order.getOrderStatus() == OrderStatus.CANCELLED
+                || order.getOrderStatus() == OrderStatus.FULFILLMENT_COMPLETE) {
+            throw new CustomBadRequestException("Order is already closed and cannot be cancelled");
+        }
+        if (order.getOrderStatus() != OrderStatus.CREATED
+                && order.getOrderStatus() != OrderStatus.CONFIRMED) {
+            throw new CustomBadRequestException(
+                    "Order cannot be cancelled at this stage"
+            );
+        }
+
+        if (trigger != TransitionTrigger.ADMIN
+                && order.getOrderStatus() == OrderStatus.CONFIRMED) {
+            Instant confirmedAt = payment.getCompletedAt();
+            if (confirmedAt == null) {
+                throw new CustomBadRequestException("Order confirmation time is unavailable");
             }
+            if (Instant.now().isAfter(confirmedAt.plusSeconds(6 * 60 * 60))) {
+                throw new CustomBadRequestException(
+                        "Cancellation window has expired. Orders can only be cancelled within 6 hours of confirmation"
+                );
+            }
+        }
+
+        if (order.getOrderStatus() == OrderStatus.CREATED) {
             cashfreeService.terminateOrder(payment.getCfOrderId());
             payment.setStatus(PaymentStatus.CANCELLED);
             payment.setGatewayResponseMessage("Cancelled before payment");
@@ -138,7 +158,8 @@ public class OrderServiceImpl implements OrderService {
             }
         }
 
-        order.getOrderLines().forEach(line -> {
+        List<OrderLine> lines = new ArrayList<>(order.getOrderLines());
+        lines.forEach(line -> {
             if (!line.isTerminal() && line.hasPendingQty()) {
                 OrderLineUpdateRequestDTO lineRequest = new OrderLineUpdateRequestDTO();
                 lineRequest.setFulfillmentId(line.getFulfillmentId());
@@ -215,7 +236,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private Order buildOrder(Cart cart, EcommUser customer, Address address) {
-        Set<CartItem> cartItems = cart.getCartItems();
+        List<CartItem> cartItems = cart.getCartItems();
 
         Order order = new Order();
         order.setOrderId(generateOrderId());

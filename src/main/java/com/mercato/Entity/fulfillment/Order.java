@@ -5,6 +5,7 @@ import com.mercato.Entity.fulfillment.payment.PaymentStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -74,7 +75,8 @@ public class Order {
     private String deliveryPincode;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<OrderLine> orderLines = new HashSet<>();
+    @BatchSize(size = 30)
+    private List<OrderLine> orderLines = new ArrayList<>();
 
     @Column(length = 3, nullable = false, updatable = false)
     private String currency;

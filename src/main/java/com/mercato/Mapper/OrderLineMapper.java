@@ -5,6 +5,7 @@ import com.mercato.Entity.fulfillment.StateTransition;
 import com.mercato.Payloads.Response.OrderLineResponseDTO;
 import com.mercato.Payloads.Response.StateTransitionResponseDTO;
 
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 
@@ -13,7 +14,8 @@ public class OrderLineMapper {
     public static OrderLineResponseDTO toDto(OrderLine orderLine) {
         List<StateTransitionResponseDTO> stateTransitionDTOs = orderLine.getStateTransitions()
                 .stream()
-                .sorted(Comparator.comparing(StateTransition::getOccurredAt).reversed())
+                .sorted(Comparator.comparing(StateTransition::getOccurredAt,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
                 .map(t -> new StateTransitionResponseDTO(
                         t.getFromStatus().toString(),
                         t.getToStatus().toString(),
@@ -21,11 +23,12 @@ public class OrderLineMapper {
                         t.getTriggeredBy().toString(),
                         t.getQtyAffected(),
                         t.getReason(),
-                        t.getOccurredAt()
+                        t.getOccurredAt() != null ? t.getOccurredAt() : Instant.now()
                 ))
                 .toList();
 
         return new OrderLineResponseDTO(
+                orderLine.getFulfillmentId(),
                 orderLine.getOrder().getOrderId(),
                 orderLine.getOrderLineNumber(),
                 orderLine.getOrderLineStatus().toString(),

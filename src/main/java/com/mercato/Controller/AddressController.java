@@ -17,7 +17,7 @@ public class AddressController {
 
     private final AddressService addressService;
 
-    @PostMapping("/users/addresses/add")
+    @PostMapping("/user/addresses/add")
     public ResponseEntity<AddressResponseDTO> createAddress(@RequestBody AddressRequestDTO addressRequestDTO) {
         AddressResponseDTO savedAddressResponseDTO = addressService.createAddress(addressRequestDTO);
         return new ResponseEntity<>(savedAddressResponseDTO, HttpStatus.CREATED);
@@ -35,20 +35,20 @@ public class AddressController {
         return new ResponseEntity<>(addressResponseDTO, HttpStatus.OK);
     }
 
-    @GetMapping("/users/addresses")
+    @GetMapping("/user/addresses")
     public ResponseEntity<List<AddressResponseDTO>> getUserAddresses() {
         List<AddressResponseDTO> addressResponseDTOList = addressService.getUserAddresses();
         return new ResponseEntity<>(addressResponseDTOList, HttpStatus.OK);
     }
 
-    @PutMapping("/users/addresses/{addressId}")
+    @PutMapping("/user/addresses/{addressId}")
     public ResponseEntity<AddressResponseDTO> updateAddress(@PathVariable String addressId,
                                                             @RequestBody AddressRequestDTO addressRequestDTO) {
         AddressResponseDTO updatedAddressResponseDTO = addressService.updateAddress(addressId, addressRequestDTO);
         return new ResponseEntity<>(updatedAddressResponseDTO, HttpStatus.OK);
     }
 
-    @DeleteMapping("/users/addresses/{addressId}")
+    @DeleteMapping("/user/addresses/{addressId}")
     public ResponseEntity<String> deleteAddress(@PathVariable String addressId) {
         addressService.deleteAddress(addressId);
         return new ResponseEntity<>("Address deleted successfully", HttpStatus.OK);

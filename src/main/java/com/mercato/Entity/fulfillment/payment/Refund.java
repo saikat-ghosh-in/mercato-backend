@@ -34,7 +34,7 @@ public class Refund {
     @EqualsAndHashCode.Include
     private Long id;
 
-    @Column(name = "refund_id", nullable = false, updatable = false, length = 30)
+    @Column(name = "refund_id", nullable = false, updatable = false)
     private String refundId;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
@@ -56,10 +56,10 @@ public class Refund {
 
     private String reason;
 
-    @Column(name = "gateway_response_message")
+    @Column(name = "gateway_response_message", columnDefinition = "TEXT")
     private String gatewayResponseMessage;
 
-    @Column(name = "failure_reason")
+    @Column(name = "failure_reason", columnDefinition = "TEXT")
     private String failureReason;
 
     @CreationTimestamp

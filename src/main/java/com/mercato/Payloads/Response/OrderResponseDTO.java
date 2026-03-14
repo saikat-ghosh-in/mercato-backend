@@ -25,8 +25,8 @@ public class OrderResponseDTO {
     private final BigDecimal charges;
     private final BigDecimal totalAmount;
 
-    private final Instant createDate;
-    private final Instant updateDate;
+    private final Instant createdAt;
+    private final Instant updatedAt;
 
 
     @Getter

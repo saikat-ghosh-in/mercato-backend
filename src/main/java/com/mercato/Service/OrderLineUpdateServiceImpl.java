@@ -16,7 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.MessageFormat;
-import java.util.Set;
+import java.time.Instant;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -40,6 +41,7 @@ public class OrderLineUpdateServiceImpl implements OrderLineUpdateService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "OrderLine", "fulfillmentId", request.getFulfillmentId()
                 ));
+        OrderLineStatus lineStatus = orderLine.getOrderLineStatus();
 
         if (trigger == TransitionTrigger.SELLER) {
             EcommUser seller = authUtil.getLoggedInUser();
@@ -60,6 +62,22 @@ public class OrderLineUpdateServiceImpl implements OrderLineUpdateService {
             if (request.getAction() != OrderLineAction.CANCEL) {
                 throw new CustomBadRequestException(
                         "Customers can only cancel order lines"
+                );
+            }
+
+            if (lineStatus == OrderLineStatus.CONFIRMED) {
+                Instant confirmedAt = orderLine.getOrder().getPayment().getCompletedAt();
+                if (confirmedAt == null) {
+                    throw new CustomBadRequestException("Order confirmation time is unavailable");
+                }
+                if (Instant.now().isAfter(confirmedAt.plusSeconds(6 * 60 * 60))) {
+                    throw new CustomBadRequestException(
+                            "Cancellation window has expired. Order lines can only be cancelled within 6 hours of confirmation"
+                    );
+                }
+            } else if (lineStatus != OrderLineStatus.CREATED) {
+                throw new CustomBadRequestException(
+                        "Order line cannot be cancelled at this stage"
                 );
             }
         }
@@ -96,6 +114,7 @@ public class OrderLineUpdateServiceImpl implements OrderLineUpdateService {
                         .triggeredBy(trigger)
                         .qtyAffected(request.getAction() == OrderLineAction.ACCEPT ? null : qty)
                         .reason(request.getReason())
+                        .occurredAt(Instant.now())
                         .build()
         );
 
@@ -147,7 +166,7 @@ public class OrderLineUpdateServiceImpl implements OrderLineUpdateService {
     }
 
     private void syncOrderStatus(Order order) {
-        Set<OrderLine> lines = order.getOrderLines();
+        List<OrderLine> lines = order.getOrderLines();
 
         boolean allCancelled = lines.stream()
                 .allMatch(l -> l.getOrderLineStatus() == OrderLineStatus.CANCELLED);

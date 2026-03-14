@@ -5,12 +5,12 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.*;
 
 @Builder
@@ -94,9 +94,9 @@ public class OrderLine {
     private OrderLineStatus orderLineStatus;
 
     @OneToMany(mappedBy = "orderLine", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("occurredAt DESC")
+    @BatchSize(size = 50)
     @Builder.Default
-    private Set<StateTransition> stateTransitions = new HashSet<>();
+    private List<StateTransition> stateTransitions = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -106,16 +106,6 @@ public class OrderLine {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-
-    @PrePersist
-    private void prePersist() {
-        if (this.fulfillmentId == null) {
-            String datePart = LocalDate.now().toString().replace("-", "");
-            String randomPart = UUID.randomUUID().toString().replace("-", "")
-                    .substring(0, 12).toUpperCase();
-            this.fulfillmentId = "FUL-" + datePart + "-" + randomPart;
-        }
-    }
 
     @Transient
     public int getPendingQty() {

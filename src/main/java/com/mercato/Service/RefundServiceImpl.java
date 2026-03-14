@@ -12,7 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.Set;
+import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -43,7 +44,10 @@ public class RefundServiceImpl implements RefundService {
             return;
         }
 
+        String refundId = "RFD-" + order.getOrderId() + "-" + UUID.randomUUID().toString()
+                .replace("-", "").substring(0, 8).toUpperCase();
         Refund refund = Refund.builder()
+                .refundId(refundId)
                 .payment(order.getPayment())
                 .amount(refundAmount)
                 .currency(order.getCurrency())
@@ -54,12 +58,10 @@ public class RefundServiceImpl implements RefundService {
         try {
             String gatewayRefundId = cashfreeService.initiateRefund(
                     order,
-                    cfOrderId,
-                    refundAmount
+                    refund
             );
 
             refund.setGatewayReference(gatewayRefundId);
-            refund.setStatus(RefundStatus.PENDING);
 
             log.info("Refund initiated for order: {}, refundId: {}, amount: {}",
                     order.getOrderId(), gatewayRefundId, refundAmount);
@@ -75,7 +77,7 @@ public class RefundServiceImpl implements RefundService {
     }
 
     private BigDecimal calculateRefundAmount(Order order) {
-        Set<OrderLine> lines = order.getOrderLines();
+        List<OrderLine> lines = order.getOrderLines();
 
         boolean nothingShipped = lines.stream()
                 .allMatch(l -> l.getShippedQty() == 0);

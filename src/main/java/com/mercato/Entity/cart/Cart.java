@@ -3,6 +3,7 @@ package com.mercato.Entity.cart;
 import com.mercato.Entity.*;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -47,16 +48,18 @@ public class Cart {
             cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REMOVE},
             orphanRemoval = true
     )
+    @BatchSize(size = 30)
     @Builder.Default
-    private Set<CartItem> cartItems = new HashSet<>();
+    private List<CartItem> cartItems = new ArrayList<>();
 
     @OneToMany(
             mappedBy = "cart",
             cascade = CascadeType.ALL,
             orphanRemoval = true
     )
+    @BatchSize(size = 20)
     @Builder.Default
-    private Set<CartCharge> charges = new HashSet<>();
+    private List<CartCharge> charges = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -65,6 +68,7 @@ public class Cart {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private Instant updatedAt;
+
 
     @PrePersist
     private void prePersist() {
@@ -75,7 +79,6 @@ public class Cart {
             this.cartId = "CART-" + datePart + "-" + randomPart;
         }
     }
-
 
     @Transient
     public BigDecimal getTotal() {

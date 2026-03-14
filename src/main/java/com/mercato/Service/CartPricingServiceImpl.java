@@ -22,6 +22,11 @@ public class CartPricingServiceImpl implements CartPricingService {
         BigDecimal subtotal = cart.getSubtotal();
         int cartQty = cart.getCartQuantity();
 
+        if (subtotal.compareTo(BigDecimal.ZERO) == 0) {
+            cart.clearCharges();
+            return;
+        }
+
         applyShipping(cart, subtotal);
         applyPlatformFee(cart);
         applyProcessing(cart, cartQty);

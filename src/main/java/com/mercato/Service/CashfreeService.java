@@ -3,9 +3,8 @@ package com.mercato.Service;
 import com.mercato.Entity.EcommUser;
 import com.mercato.Entity.fulfillment.Order;
 import com.mercato.Entity.fulfillment.payment.PaymentMethod;
+import com.mercato.Entity.fulfillment.payment.Refund;
 import com.mercato.Payloads.Response.CashfreeOrderResponse;
-
-import java.math.BigDecimal;
 
 public interface CashfreeService {
 
@@ -21,5 +20,5 @@ public interface CashfreeService {
 
     String verifyAndSyncPayment(String orderId);
 
-    String initiateRefund(Order order, String cfOrderId, BigDecimal amount);
+    String initiateRefund(Order order, Refund refund);
 }
