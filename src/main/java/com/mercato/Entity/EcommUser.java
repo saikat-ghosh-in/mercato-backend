@@ -70,8 +70,8 @@ public class EcommUser {
     @Column(name = "last_name", length = 50)
     private String lastName;
 
-    @Pattern(regexp = "^[+]?[0-9]{7,15}$", message = "Invalid phone number")
-    @Column(name = "phone_number", length = 15)
+    @Pattern(regexp = "^[0-9]{10}$", message = "Invalid phone number")
+    @Column(name = "phone_number", length = 10)
     private String phoneNumber;
 
     @Column(name = "profile_image_url")

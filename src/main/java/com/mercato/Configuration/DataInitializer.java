@@ -56,6 +56,8 @@ public class DataInitializer implements CommandLineRunner {
 
         Role adminRole = roleRepository.findByRoleName(AppRole.ROLE_ADMIN)
                 .orElseThrow(() -> new RuntimeException("ROLE_ADMIN not found"));
+        Role sellerRole = roleRepository.findByRoleName(AppRole.ROLE_SELLER)
+                .orElseThrow(() -> new RuntimeException("ROLE_SELLER not found"));
 
         EcommUser admin = EcommUser.builder()
                 .username(adminUsername)
@@ -66,7 +68,7 @@ public class DataInitializer implements CommandLineRunner {
                 .enabled(true)
                 .accountLocked(false)
                 .emailVerified(true)
-                .roles(Set.of(adminRole))
+                .roles(Set.of(adminRole, sellerRole))
                 .sellerDisplayName("Marcato Admin")
                 .build();
 

@@ -83,6 +83,9 @@ public class OrderLine {
     @Column(nullable = false, precision = 15, scale = 2, updatable = false)
     private BigDecimal lineTotal;
 
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal revenue = BigDecimal.valueOf(0);
+
     @Column(updatable = false, length = 100)
     private String sellerName;
 
@@ -164,6 +167,7 @@ public class OrderLine {
                     "Cannot ship more than pending qty: " + getPendingQty()
             );
         this.shippedQty += qty;
+        this.revenue = this.unitPrice.multiply(BigDecimal.valueOf(this.shippedQty));
     }
 
     public void cancel(int qty) {

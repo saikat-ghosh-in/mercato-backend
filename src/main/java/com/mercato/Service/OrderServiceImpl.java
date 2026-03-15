@@ -13,11 +13,8 @@ import com.mercato.ExceptionHandler.ResourceNotFoundException;
 import com.mercato.Mapper.OrderMapper;
 import com.mercato.Payloads.Request.OrderCancelRequestDTO;
 import com.mercato.Payloads.Request.OrderLineUpdateRequestDTO;
-import com.mercato.Payloads.Response.CashfreeOrderResponse;
-import com.mercato.Payloads.Response.OrderPlacementResponseDTO;
-import com.mercato.Payloads.Response.OrderResponseDTO;
+import com.mercato.Payloads.Response.*;
 import com.mercato.Payloads.Request.OrderCaptureRequestDTO;
-import com.mercato.Payloads.Response.OrderSummaryDTO;
 import com.mercato.Repository.AddressRepository;
 import com.mercato.Repository.OrderRepository;
 import com.mercato.Repository.ProductRepository;
@@ -97,8 +94,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public OrderResponseDTO cancelOrder(OrderCancelRequestDTO request) {
-        TransitionTrigger trigger = authUtil.resolveTransitionTrigger();
+    public OrderResponseDTO cancelOrder(OrderCancelRequestDTO request, TransitionTrigger trigger) {
 
         Order order;
         if (trigger == TransitionTrigger.ADMIN) {
@@ -209,6 +205,12 @@ public class OrderServiceImpl implements OrderService {
     public List<OrderSummaryDTO> getCurrentUserOrderSummaries() {
         EcommUser currentUser = authUtil.getLoggedInUser();
         return orderRepository.findOrderSummariesByCustomerEmail(currentUser.getEmail());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AdminOrderSummaryDTO> getAllOrderSummaries() {
+        return orderRepository.findAllOrderSummaries();
     }
 
     @Override

@@ -7,12 +7,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
 import java.util.Set;
 
 @RestController
@@ -26,25 +23,13 @@ public class AuthController {
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest,
                                               HttpServletRequest request,
                                               HttpServletResponse response) {
-        try {
-            return authService.authenticateUser(loginRequest, request, response);
-        } catch (AuthenticationException e) {
-            Map<String, Object> errorMap = Map.of(
-                    "message", e.getMessage(),
-                    "status", false
-            );
-            return new ResponseEntity<>(errorMap, HttpStatus.UNAUTHORIZED);
-        }
+        return authService.authenticateUser(loginRequest, request, response);
     }
 
     @PostMapping("/auth/register")
     public ResponseEntity<?> registerNewUser(@Valid @RequestBody RegisterUserRequest registerUserRequest) {
-        try {
-            String response = authService.registerNewUser(registerUserRequest);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
-        }
+        String response = authService.registerNewUser(registerUserRequest);
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/admin/{userId}/roles")

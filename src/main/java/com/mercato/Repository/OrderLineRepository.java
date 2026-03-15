@@ -1,6 +1,8 @@
 package com.mercato.Repository;
 
 import com.mercato.Entity.fulfillment.OrderLine;
+import com.mercato.Entity.fulfillment.OrderLineStatus;
+import com.mercato.Entity.fulfillment.payment.PaymentStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
@@ -33,18 +35,16 @@ public interface OrderLineRepository extends JpaRepository<OrderLine, Long> {
     List<OrderLine> findAllByFulfillmentIdAndSellerEmail(String fulfillmentId, String sellerEmail);
 
     @Query("""
-            SELECT COALESCE(SUM(ol.unitPrice * ol.shippedQty), 0)
+            SELECT COALESCE(SUM(ol.revenue), 0)
             FROM OrderLine ol
             WHERE ol.sellerEmail = :sellerEmail
-            AND ol.shippedQty > 0
             """)
-    BigDecimal findTotalRevenueBySeller(@Param("sellerEmail") String sellerEmail);
+    BigDecimal findRevenueBySeller(@Param("sellerEmail") String sellerEmail);
 
     @Query("""
-            SELECT COALESCE(SUM(ol.unitPrice * ol.shippedQty), 0)
+            SELECT COALESCE(SUM(ol.revenue), 0)
             FROM OrderLine ol
             WHERE ol.sellerEmail = :sellerEmail
-            AND ol.shippedQty > 0
             AND ol.updatedAt >= :start AND ol.updatedAt < :end
             """)
     BigDecimal findRevenueBySellerBetween(@Param("sellerEmail") String sellerEmail,
@@ -52,27 +52,64 @@ public interface OrderLineRepository extends JpaRepository<OrderLine, Long> {
                                           @Param("end") Instant end);
 
     @Query("""
-            SELECT COUNT(DISTINCT ol.order.id)
-            FROM OrderLine ol
-            WHERE ol.sellerEmail = :sellerEmail
-            """)
-    long countDistinctOrdersBySeller(@Param("sellerEmail") String sellerEmail);
-
-    @Query("""
-            SELECT COUNT(ol)
-            FROM OrderLine ol
-            WHERE ol.sellerEmail = :sellerEmail
-            """)
-    long countOrderLinesBySeller(@Param("sellerEmail") String sellerEmail);
-
-    @Query("""
-            SELECT COALESCE(AVG(orderTotal), 0)
+            SELECT COALESCE(AVG(fulfillmentRevenue), 0)
             FROM (
-                SELECT SUM(ol.unitPrice * ol.shippedQty) AS orderTotal
+                SELECT SUM(ol.revenue) AS fulfillmentRevenue
                 FROM OrderLine ol
                 WHERE ol.sellerEmail = :sellerEmail
-                AND ol.shippedQty > 0
-                GROUP BY ol.order.id
+                GROUP BY ol.fulfillmentId
+            )
+            """)
+    BigDecimal findAverageRevenuePerOrderBySeller(@Param("sellerEmail") String sellerEmail);
+
+    @Query("""
+            SELECT COUNT(DISTINCT ol.fulfillmentId)
+            FROM OrderLine ol
+            WHERE ol.sellerEmail = :sellerEmail
+            """)
+    long countTotalOrdersBySeller(@Param("sellerEmail") String sellerEmail);
+
+    @Query("""
+            SELECT COUNT(DISTINCT ol.fulfillmentId)
+            FROM OrderLine ol
+            WHERE ol.sellerEmail = :sellerEmail
+            AND ol.createdAt BETWEEN :start AND :end
+            """)
+    long countOrdersBySellerCreatedBetween(
+            @Param("sellerEmail") String sellerEmail,
+            @Param("start") Instant start,
+            @Param("end") Instant end
+    );
+
+    @Query("""
+            SELECT COUNT(DISTINCT ol.fulfillmentId)
+            FROM OrderLine ol
+            WHERE ol.sellerEmail = :sellerEmail
+            AND ol.order.paymentStatus IN :statuses
+            """)
+    long countPendingPaymentBySeller(
+            @Param("sellerEmail") String sellerEmail,
+            @Param("statuses") List<PaymentStatus> statuses
+    );
+
+    @Query("""
+            SELECT COUNT(DISTINCT ol.fulfillmentId)
+            FROM OrderLine ol
+            WHERE ol.sellerEmail = :sellerEmail
+            AND ol.orderLineStatus IN :statuses
+            """)
+    long countActiveOrdersBySeller(
+            @Param("sellerEmail") String sellerEmail,
+            @Param("statuses") List<OrderLineStatus> statuses
+    );
+
+    @Query("""
+            SELECT COALESCE(AVG(fulfillmentTotal), 0)
+            FROM (
+                SELECT SUM(ol.lineTotal) AS fulfillmentTotal
+                FROM OrderLine ol
+                WHERE ol.sellerEmail = :sellerEmail
+                GROUP BY ol.fulfillmentId
             )
             """)
     BigDecimal findAverageOrderValueBySeller(@Param("sellerEmail") String sellerEmail);
@@ -88,6 +125,17 @@ public interface OrderLineRepository extends JpaRepository<OrderLine, Long> {
             ORDER BY totalShippedQty DESC
             """)
     List<Object[]> findTopSellingProductsBySeller(@Param("sellerEmail") String sellerEmail);
+
+    @Query("""
+            SELECT ol.productId, ol.productName,
+                   SUM(ol.shippedQty) AS totalShippedQty,
+                   SUM(ol.unitPrice * ol.shippedQty) AS totalRevenue
+            FROM OrderLine ol
+            WHERE ol.shippedQty > 0
+            GROUP BY ol.productId, ol.productName
+            ORDER BY totalShippedQty DESC
+            """)
+    List<Object[]> findTopSellingProducts();
 
     @Query("""
             SELECT ol.orderLineStatus, COUNT(ol)

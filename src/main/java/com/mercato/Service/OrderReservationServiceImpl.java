@@ -36,6 +36,9 @@ public class OrderReservationServiceImpl implements OrderReservationService {
                             "Product", "productId", orderLine.getProductId()
                     ));
 
+            product.increaseReservedQty(orderLine.getOrderedQty());
+            productRepository.save(product);
+
             OrderReservation reservation = OrderReservation.builder()
                     .order(order)
                     .orderLine(orderLine)

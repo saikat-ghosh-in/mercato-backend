@@ -107,6 +107,13 @@ public class Order {
     private Instant updatedAt;
 
 
+    @Transient
+    public BigDecimal getRevenue() {
+        return orderLines.stream()
+                .map(OrderLine::getRevenue)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
     public void attachPayment(Payment payment) {
         if (this.orderStatus != OrderStatus.CREATED) {
             throw new IllegalStateException("Cannot attach payment after order is confirmed");

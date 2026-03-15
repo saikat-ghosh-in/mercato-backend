@@ -4,6 +4,7 @@ import com.mercato.Entity.fulfillment.TransitionTrigger;
 import com.mercato.Payloads.Request.*;
 import com.mercato.Payloads.Response.*;
 import com.mercato.Service.CashfreeService;
+import com.mercato.Service.FulfillmentService;
 import com.mercato.Service.OrderLineUpdateService;
 import com.mercato.Service.OrderService;
 import com.mercato.Utils.AuthUtil;
@@ -21,6 +22,7 @@ import java.util.List;
 public class OrderController {
 
     private final OrderService orderService;
+    private final FulfillmentService fulfillmentService;
     private final CashfreeService cashfreeService;
     private final OrderLineUpdateService orderLineUpdateService;
     private final AuthUtil authUtil;
@@ -78,11 +80,31 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getCurrentUserOrderSummaries());
     }
 
+    @GetMapping("/admin/orders/summary")
+    public ResponseEntity<List<AdminOrderSummaryDTO>> getAllOrderSummaries() {
+        return ResponseEntity.ok(orderService.getAllOrderSummaries());
+    }
+
     @GetMapping("/admin/orders/{orderId}")
     public ResponseEntity<OrderResponseDTO> getOrder(@PathVariable String orderId) {
 
         OrderResponseDTO order = orderService.getOrder(orderId);
         return new ResponseEntity<>(order, HttpStatus.OK);
+    }
+
+    @GetMapping("/seller/open-fulfillment-orders")
+    public ResponseEntity<List<FulfillmentOrderResponseDTO>> getOpenFulfillmentOrders() {
+        return ResponseEntity.ok(fulfillmentService.getOpenFulfillmentOrders());
+    }
+
+    @GetMapping("/seller/closed-fulfillment-orders")
+    public ResponseEntity<List<FulfillmentOrderResponseDTO>> getClosedFulfillmentOrders() {
+        return ResponseEntity.ok(fulfillmentService.getClosedFulfillmentOrders());
+    }
+
+    @GetMapping("/seller/fulfillment-orders/{fulfillmentId}")
+    public ResponseEntity<FulfillmentOrderResponseDTO> getFulfillmentOrder(@PathVariable String fulfillmentId) {
+        return ResponseEntity.ok(fulfillmentService.getFulfillmentOrder(fulfillmentId));
     }
 
     @PostMapping("/order-line/update")
@@ -94,7 +116,8 @@ public class OrderController {
 
     @PostMapping("/user/orders/cancel")
     public ResponseEntity<OrderResponseDTO> cancelOrder(@RequestBody @Valid OrderCancelRequestDTO request) {
-        OrderResponseDTO response = orderService.cancelOrder(request);
+        TransitionTrigger trigger = authUtil.resolveTransitionTrigger();
+        OrderResponseDTO response = orderService.cancelOrder(request, trigger);
         return ResponseEntity.ok(response);
     }
 }

@@ -1,6 +1,8 @@
 package com.mercato.Service;
 
+import com.mercato.Entity.fulfillment.TransitionTrigger;
 import com.mercato.Payloads.Request.OrderCancelRequestDTO;
+import com.mercato.Payloads.Response.AdminOrderSummaryDTO;
 import com.mercato.Payloads.Response.OrderPlacementResponseDTO;
 import com.mercato.Payloads.Response.OrderResponseDTO;
 import com.mercato.Payloads.Request.OrderCaptureRequestDTO;
@@ -22,7 +24,9 @@ public interface OrderService {
 
     List<OrderSummaryDTO> getCurrentUserOrderSummaries();
 
+    List<AdminOrderSummaryDTO> getAllOrderSummaries();
+
     OrderResponseDTO getOrder(String orderId);
 
-    OrderResponseDTO cancelOrder(OrderCancelRequestDTO request);
+    OrderResponseDTO cancelOrder(OrderCancelRequestDTO request, TransitionTrigger trigger);
 }

@@ -184,6 +184,7 @@ public class CashfreeServiceImpl implements CashfreeService {
 
         if (PaymentStatus.SUCCESS.equals(payment.getStatus())) {
             log.info("Payment already confirmed for orderId={}, syncing refund", orderId);
+            orderReservationService.reserveForOrder(order);
             syncRefund(orderId, payment);
             return "Payment already confirmed, refund status synced";
         }
