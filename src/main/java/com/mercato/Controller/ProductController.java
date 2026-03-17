@@ -93,9 +93,4 @@ public class ProductController {
         List<ProductSupplyUpdateResponseDTO> productSupplyUpdateResponseDTOs = productService.updateProductInventory(productSupplyUpdateRequestDTOs);
         return new ResponseEntity<>(productSupplyUpdateResponseDTOs, HttpStatus.OK);
     }
-
-    @PostMapping("/admin/addDummyProducts")
-    public ResponseEntity<String> addDummyProducts() {
-        return new ResponseEntity<>(productService.addDummyProducts(), HttpStatus.CREATED);
-    }
 }

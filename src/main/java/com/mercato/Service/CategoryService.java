@@ -16,6 +16,4 @@ public interface CategoryService {
     CategoryResponseDTO updateCategory(String categoryId, CategoryRequestDTO categoryRequestDTO);
 
     void deleteCategory(String categoryId);
-
-    String addDummyCategories();
 }

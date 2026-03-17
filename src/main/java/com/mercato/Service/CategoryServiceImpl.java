@@ -87,53 +87,6 @@ public class CategoryServiceImpl implements CategoryService {
         categoryRepository.delete(category);
     }
 
-    @Override
-    @Transactional
-    public String addDummyCategories() {
-        List<String> dummyCategories = List.of(
-                "Mens T-Shirts",
-                "Smartphones",
-                "Apparel",
-                "Home Appliances",
-                "Toys",
-                "Furniture",
-                "Books",
-                "Sports Equipment",
-                "Beauty Products",
-                "Automotive",
-                "Outdoor Gear",
-                "Electronics",
-                "Kitchen Appliances",
-                "Baby Products",
-                "Health & Fitness",
-                "Garden & Outdoor",
-                "Pet Supplies",
-                "Office Supplies",
-                "Jewelry & Watches",
-                "Travel & Luggage",
-                "Musical Instruments",
-                "Crafts & Hobbies",
-                "Collectibles & Memorabilia",
-                "Art & Decor",
-                "Food & Beverages",
-                "Stationery & Gift Wrapping",
-                "Electrical & Lighting",
-                "DIY & Tools",
-                "Party Supplies",
-                "Educational Toys"
-        );
-
-        dummyCategories.forEach(categoryName -> {
-            if (!categoryRepository.existsByCategoryName(categoryName)) {
-                Category category = new Category();
-                category.setCategoryName(categoryName);
-                categoryRepository.save(category);
-            }
-        });
-
-        return "Categories inserted safely";
-    }
-
 
     private Category getCategoryByCategoryId(String categoryId) {
         if (categoryId == null) {

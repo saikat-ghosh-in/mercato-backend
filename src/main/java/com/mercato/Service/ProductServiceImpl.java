@@ -70,7 +70,11 @@ public class ProductServiceImpl implements ProductService {
         Product product = new Product();
         product.setProductName(productRequestDTO.getProductName());
         product.setActive(productRequestDTO.isActive());
-        product.setImagePath(placeholderImageUrl);
+        product.setImagePath(
+                StringUtils.isNotEmpty(productRequestDTO.getImageUrl())
+                        ? productRequestDTO.getImageUrl()
+                        : placeholderImageUrl
+        );
         product.setDescription(productRequestDTO.getDescription());
         product.setRetailPrice(productRequestDTO.getRetailPrice());
         product.setDiscountPercent(productRequestDTO.getDiscountPercent());
@@ -250,34 +254,6 @@ public class ProductServiceImpl implements ProductService {
         });
 
         return responses;
-    }
-
-    @Override
-    @Transactional
-    public String addDummyProducts() {
-        EcommUser admin = authUtil.getLoggedInUser();
-        List<Category> categories = categoryRepository.findAll();
-        if (categories.isEmpty())
-            throw new RuntimeException("No categories found");
-
-        List<Product> products = new ArrayList<>();
-        for (int i = 1; i <= 30; i++) {
-            Category category = categories.get(i % categories.size());
-            Product p = new Product();
-            p.setProductName("Dummy Product " + i);
-            p.setActive(true);
-            p.setDescription("Dummy description for product " + i);
-            p.setImagePath(placeholderImageUrl);
-            p.setPhysicalQty(10 + i);
-            p.setRetailPrice(new BigDecimal(500 + (i * 25)));
-            p.setDiscountPercent(new BigDecimal(i % 20));
-            p.setCategory(category);
-            p.setSeller(admin);
-            products.add(p);
-        }
-
-        productRepository.saveAll(products);
-        return "success";
     }
 
 

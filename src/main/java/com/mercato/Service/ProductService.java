@@ -35,6 +35,4 @@ public interface ProductService {
     ProductResponseDTO uploadProductImage(String productId, MultipartFile image) throws IOException;
 
     List<ProductSupplyUpdateResponseDTO> updateProductInventory(List<ProductSupplyUpdateRequestDTO> productSupplyUpdateRequestDTOs);
-
-    String addDummyProducts();
 }
