@@ -79,7 +79,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public void deleteCategory(String categoryId) {
         Category category = getCategoryByCategoryId(categoryId);
-        if (productRepository.existsByCategory_CategoryId(categoryId)) {
+        if (productRepository.existsByCategoryCategoryId(categoryId)) {
             throw new CustomBadRequestException(
                     "Cannot delete category with existing products"
             );

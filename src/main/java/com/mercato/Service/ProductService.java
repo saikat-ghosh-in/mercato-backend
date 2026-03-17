@@ -16,11 +16,17 @@ public interface ProductService {
 
     ProductResponseDTO addProduct(String categoryId, ProductRequestDTO productRequestDTO);
 
-    ProductResponse getProducts(ProductFilterRequestDTO filter);
+    ProductResponse getActiveProducts(ProductFilterRequestDTO filter);
 
     List<ProductResponseDTO> getSellerProducts(SellerProductFilterRequestDTO filter);
 
-    ProductResponseDTO getProduct(String productId);
+    List<ProductResponseDTO> getAllProducts();
+
+    ProductResponseDTO getActiveProduct(String productId);
+
+    ProductResponseDTO getSellerProduct(String productId);
+
+    ProductResponseDTO getAdminProduct(String productId);
 
     ProductResponseDTO updateProduct(String productId, String categoryId, ProductRequestDTO productRequestDTO);
 

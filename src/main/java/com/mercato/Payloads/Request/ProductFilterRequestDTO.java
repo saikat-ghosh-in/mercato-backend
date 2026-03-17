@@ -16,7 +16,7 @@ public class ProductFilterRequestDTO {
     private String sortBy = AppConstants.SORT_PRODUCTS_BY;
     private String sortingOrder = AppConstants.SORTING_ORDER;
     private String category;
-    private String seller;
+    private String sellers;
     private String keyword;
     private BigDecimal minPrice;
     private BigDecimal maxPrice;

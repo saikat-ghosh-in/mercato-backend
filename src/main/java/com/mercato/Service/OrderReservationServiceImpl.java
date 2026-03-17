@@ -31,7 +31,7 @@ public class OrderReservationServiceImpl implements OrderReservationService {
                 return;
             }
 
-            Product product = productRepository.findByProductId(orderLine.getProductId())
+            Product product = productRepository.findByProductIdForUpdate(orderLine.getProductId())
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Product", "productId", orderLine.getProductId()
                     ));

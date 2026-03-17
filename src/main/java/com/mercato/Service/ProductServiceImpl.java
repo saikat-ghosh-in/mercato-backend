@@ -25,6 +25,7 @@ import com.mercato.Repository.ProductRepository;
 import com.mercato.Utils.AuthUtil;
 import com.mercato.Utils.FileService;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -62,7 +63,6 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponseDTO addProduct(String categoryId, ProductRequestDTO productRequestDTO) {
-
         Category category = getCategoryByCategoryId(categoryId);
         EcommUser seller = authUtil.getLoggedInUser();
         validateIfAlreadyExists(productRequestDTO.getProductName(), seller.getUserId());
@@ -83,12 +83,10 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
-    public ProductResponse getProducts(ProductFilterRequestDTO filter) {
+    public ProductResponse getActiveProducts(ProductFilterRequestDTO filter) {
         Sort sort = buildSort(filter.getSortBy(), filter.getSortingOrder());
-        Specification<Product> spec = buildSpec(
-                null, filter.getCategory(), filter.getSeller(),
-                filter.getKeyword(), filter.getMinPrice(), filter.getMaxPrice(), filter.isInStock()
-        );
+
+        Specification<Product> spec = buildActiveSpec(filter);
 
         long totalElements = productRepository.count(spec);
         int totalPages = (int) Math.ceil((double) totalElements / filter.getPageSize());
@@ -115,15 +113,21 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
+    public ProductResponseDTO getActiveProduct(String productId) {
+        if (productId == null)
+            throw new IllegalArgumentException("productId must not be null!");
+        Product product = productRepository.findByProductIdAndActiveTrue(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
+        return productMapper.toDto(product);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<ProductResponseDTO> getSellerProducts(SellerProductFilterRequestDTO filter) {
         EcommUser seller = authUtil.getLoggedInUser();
         Sort sort = buildSort(filter.getSortBy(), filter.getSortingOrder());
-        Specification<Product> spec = buildSpec(
-                seller.getUserId(), filter.getCategory(), null,
-                filter.getKeyword(), null, null, false
-        );
 
-        return productRepository.findAll(spec, sort)
+        return productRepository.findAllBySellerUserId(seller.getUserId(), sort)
                 .stream()
                 .map(productMapper::toDto)
                 .toList();
@@ -131,7 +135,26 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
-    public ProductResponseDTO getProduct(String productId) {
+    public ProductResponseDTO getSellerProduct(String productId) {
+        EcommUser seller = authUtil.getLoggedInUser();
+        if (productId == null)
+            throw new IllegalArgumentException("productId must not be null!");
+        Product product = productRepository.findByProductIdAndSellerUserId(productId, seller.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
+        return productMapper.toDto(product);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductResponseDTO> getAllProducts() {
+        return productRepository.findAll().stream()
+                .map(productMapper::toDto)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductResponseDTO getAdminProduct(String productId) {
         if (productId == null)
             throw new IllegalArgumentException("productId must not be null!");
         Product product = productRepository.findByProductId(productId)
@@ -152,8 +175,10 @@ public class ProductServiceImpl implements ProductService {
             validateIfAlreadyExists(productRequestDTO.getProductName(), seller.getUserId());
         }
 
-        Category category = getCategoryByCategoryId(categoryId);
-        product.setCategory(category);
+        if (StringUtils.isNotEmpty(categoryId)) {
+            Category category = getCategoryByCategoryId(categoryId);
+            product.setCategory(category);
+        }
 
         product.setProductName(productRequestDTO.getProductName());
         product.setActive(productRequestDTO.isActive());
@@ -180,7 +205,7 @@ public class ProductServiceImpl implements ProductService {
         if (image == null || image.isEmpty())
             throw new IllegalArgumentException("Image file must not be empty");
 
-        long maxSize = 100 * 1024; // 100 KB
+        long maxSize = 100 * 1024;
         if (image.getSize() > maxSize)
             throw new IllegalArgumentException("Image size must not exceed 100 KB");
 
@@ -198,7 +223,6 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public List<ProductSupplyUpdateResponseDTO> updateProductInventory(List<ProductSupplyUpdateRequestDTO> productSupplyUpdateRequestDTOs) {
-
         List<ProductSupplyUpdateResponseDTO> responses = new ArrayList<>();
         EcommUser seller = authUtil.getLoggedInUser();
 
@@ -219,14 +243,9 @@ public class ProductServiceImpl implements ProductService {
                 isError = true;
                 errorMessage = ex.getMessage();
             } finally {
-                responses.add(
-                        new ProductSupplyUpdateResponseDTO(
-                                dto.getProductId(),
-                                dto.getSupplyType(),
-                                dto.getQuantity(),
-                                isError,
-                                errorMessage)
-                );
+                responses.add(new ProductSupplyUpdateResponseDTO(
+                        dto.getProductId(), dto.getSupplyType(),
+                        dto.getQuantity(), isError, errorMessage));
             }
         });
 
@@ -242,7 +261,6 @@ public class ProductServiceImpl implements ProductService {
             throw new RuntimeException("No categories found");
 
         List<Product> products = new ArrayList<>();
-
         for (int i = 1; i <= 30; i++) {
             Category category = categories.get(i % categories.size());
             Product p = new Product();
@@ -263,20 +281,23 @@ public class ProductServiceImpl implements ProductService {
     }
 
 
+    private Specification<Product> buildActiveSpec(ProductFilterRequestDTO filter) {
+        Specification<Product> activeOnly = (root, query, cb) -> cb.isTrue(root.get("active"));
+        Specification<Product> filters = buildSpec(
+                filter.getCategory(), filter.getSellers(),
+                filter.getKeyword(), filter.getMinPrice(), filter.getMaxPrice(), filter.isInStock()
+        );
+        return activeOnly.and(filters);
+    }
+
     @Transactional
     private void forceSetInventory(Product product, int newPhysicalQty) {
         if (newPhysicalQty < 0)
             throw new IllegalArgumentException("Physical qty cannot be negative");
 
         int excess = product.getReservedQty() - newPhysicalQty;
-
-        if (excess > 0) {
-            excess = releaseCartReservations(product, excess);
-        }
-
-        if (excess > 0) {
-            releaseOrderReservations(product, excess);
-        }
+        if (excess > 0) excess = releaseCartReservations(product, excess);
+        if (excess > 0) releaseOrderReservations(product, excess);
 
         product.setInventoryAbsolute(newPhysicalQty);
         productRepository.save(product);
@@ -288,7 +309,6 @@ public class ProductServiceImpl implements ProductService {
 
         for (CartReservation reservation : cartReservations) {
             if (excess <= 0) break;
-
             int toRelease = Math.min(reservation.getReservedQty(), excess);
             product.decreaseReservedQty(toRelease);
             excess -= toRelease;
@@ -300,7 +320,6 @@ public class ProductServiceImpl implements ProductService {
                 cartReservationRepository.save(reservation);
             }
         }
-
         return excess;
     }
 
@@ -310,7 +329,6 @@ public class ProductServiceImpl implements ProductService {
 
         for (OrderReservation reservation : orderReservations) {
             if (excess <= 0) break;
-
             int toRelease = Math.min(reservation.getReservedQty(), excess);
             product.decreaseReservedQty(toRelease);
             excess -= toRelease;
@@ -322,9 +340,7 @@ public class ProductServiceImpl implements ProductService {
                 orderReservationRepository.save(reservation);
             }
         }
-
     }
-
 
     @Transactional
     private Product getProductByIdForUpdate(String productId) {
@@ -335,58 +351,46 @@ public class ProductServiceImpl implements ProductService {
     }
 
     public Category getCategoryByCategoryId(String categoryId) {
-        if (categoryId == null) {
+        if (categoryId == null)
             throw new IllegalArgumentException("categoryId must not be null");
-        }
         return categoryRepository.findByCategoryId(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "categoryId", categoryId));
     }
 
     private void validateIfAlreadyExists(String productName, String sellerId) {
-        if (productRepository.existsByProductNameAndSeller_UserId(productName, sellerId))
+        if (productRepository.existsByProductNameAndSellerUserId(productName, sellerId))
             throw new ResourceAlreadyExistsException("Product", "productName", productName);
     }
 
     private void validateAuthority(Product product, EcommUser user) {
-        if (!user.isAdmin() && !user.getUserId().equals(product.getSeller().getUserId())) {
+        if (!user.isAdmin() && !user.getUserId().equals(product.getSeller().getUserId()))
             throw new ForbiddenOperationException("You are not authorized to perform this action.");
-        }
     }
 
     private Sort buildSort(String sortBy, String sortingOrder) {
-        String validSortBy = isSortByAllowed(sortBy)
-                ? sortBy
-                : AppConstants.SORT_PRODUCTS_BY;
+        String validSortBy = isSortByAllowed(sortBy) ? sortBy : AppConstants.SORT_PRODUCTS_BY;
         return "desc".equalsIgnoreCase(sortingOrder)
                 ? Sort.by(validSortBy).descending()
                 : Sort.by(validSortBy).ascending();
     }
 
-    private Specification<Product> buildSpec(String sellerId, String category, String seller,
+    private Specification<Product> buildSpec(String category, String sellers,
                                              String keyword, BigDecimal minPrice,
                                              BigDecimal maxPrice, boolean inStock) {
         Specification<Product> spec = (root, query, cb) -> cb.conjunction();
 
-        if (sellerId != null) {
+        if (StringUtils.isNotEmpty(category)) {
             spec = spec.and((root, query, cb) ->
-                    cb.equal(root.get("seller").get("userId"), sellerId)
-            );
+                    cb.equal(root.get("category").get("categoryName"), category));
         }
 
-        if (category != null && !category.isBlank()) {
+        if (StringUtils.isNotEmpty(sellers)) {
+            List<String> sellerList = Arrays.asList(sellers.split(","));
             spec = spec.and((root, query, cb) ->
-                    cb.equal(root.get("category").get("categoryName"), category)
-            );
+                    root.get("seller").get("sellerDisplayName").in(sellerList));
         }
 
-        if (seller != null && !seller.isBlank()) {
-            List<String> sellers = Arrays.asList(seller.split(","));
-            spec = spec.and((root, query, cb) ->
-                    root.get("seller").get("sellerDisplayName").in(sellers)
-            );
-        }
-
-        if (keyword != null && !keyword.isBlank()) {
+        if (StringUtils.isNotEmpty(keyword)) {
             spec = spec.and((root, query, cb) -> {
                 String pattern = "%" + keyword.toLowerCase() + "%";
                 return cb.or(
@@ -398,28 +402,17 @@ public class ProductServiceImpl implements ProductService {
 
         if (minPrice != null) {
             spec = spec.and((root, query, cb) ->
-                    cb.greaterThanOrEqualTo(root.get("sellingPrice"), minPrice)
-            );
+                    cb.greaterThanOrEqualTo(root.get("sellingPrice"), minPrice));
         }
 
         if (maxPrice != null) {
             spec = spec.and((root, query, cb) ->
-                    cb.lessThanOrEqualTo(root.get("sellingPrice"), maxPrice)
-            );
+                    cb.lessThanOrEqualTo(root.get("sellingPrice"), maxPrice));
         }
 
         if (inStock) {
             spec = spec.and((root, query, cb) ->
-                    cb.greaterThan(
-                            cb.diff(root.get("physicalQty"), root.get("reservedQty")), 0
-                    )
-            );
-        }
-
-        if (sellerId == null) {
-            spec = spec.and((root, query, cb) ->
-                    cb.isTrue(root.get("active"))
-            );
+                    cb.greaterThan(cb.diff(root.get("physicalQty"), root.get("reservedQty")), 0));
         }
 
         return spec;

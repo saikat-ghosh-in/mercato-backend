@@ -2,6 +2,7 @@ package com.mercato.Repository;
 
 import com.mercato.Entity.Product;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -12,6 +13,12 @@ import java.util.Optional;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
 
+    Optional<Product> findByProductIdAndActiveTrue(String productId);
+
+    List<Product> findAllBySellerUserId(String sellerId, Sort sort);
+
+    Optional<Product> findByProductIdAndSellerUserId(String productId, String sellerId);
+
     @Query("SELECT p FROM Product p WHERE p.productId = :productId")
     Optional<Product> findByProductId(@Param("productId") String productId);
 
@@ -19,9 +26,9 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     @Query("SELECT p FROM Product p WHERE p.productId = :productId")
     Optional<Product> findByProductIdForUpdate(@Param("productId") String productId);
 
-    boolean existsByProductNameAndSeller_UserId(String productName, String sellerId);
+    boolean existsByProductNameAndSellerUserId(String productName, String sellerId);
 
-    boolean existsByCategory_CategoryId(String categoryId);
+    boolean existsByCategoryCategoryId(String categoryId);
 
     @Query("""
             SELECT p FROM Product p

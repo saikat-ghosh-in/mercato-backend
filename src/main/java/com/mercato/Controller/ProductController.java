@@ -32,8 +32,8 @@ public class ProductController {
     }
 
     @GetMapping("/public/products")
-    public ResponseEntity<ProductResponse> getProducts(@ModelAttribute ProductFilterRequestDTO filter) {
-        ProductResponse response = productService.getProducts(filter);
+    public ResponseEntity<ProductResponse> getActiveProducts(@ModelAttribute ProductFilterRequestDTO filter) {
+        ProductResponse response = productService.getActiveProducts(filter);
         return ResponseEntity.ok(response);
     }
 
@@ -43,9 +43,27 @@ public class ProductController {
         return new ResponseEntity<>(sellerProducts, HttpStatus.OK);
     }
 
+    @GetMapping("/admin/products")
+    public ResponseEntity<List<ProductResponseDTO>> getAllProducts() {
+        List<ProductResponseDTO> allProducts = productService.getAllProducts();
+        return new ResponseEntity<>(allProducts, HttpStatus.OK);
+    }
+
     @GetMapping("/public/products/{productId}")
-    public ResponseEntity<ProductResponseDTO> getProduct(@PathVariable String productId) {
-        ProductResponseDTO productResponseDTO = productService.getProduct(productId);
+    public ResponseEntity<ProductResponseDTO> getActiveProduct(@PathVariable String productId) {
+        ProductResponseDTO productResponseDTO = productService.getActiveProduct(productId);
+        return new ResponseEntity<>(productResponseDTO, HttpStatus.OK);
+    }
+
+    @GetMapping("/seller/products/{productId}")
+    public ResponseEntity<ProductResponseDTO> getSellerProduct(@PathVariable String productId) {
+        ProductResponseDTO productResponseDTO = productService.getSellerProduct(productId);
+        return new ResponseEntity<>(productResponseDTO, HttpStatus.OK);
+    }
+
+    @GetMapping("/admin/products/{productId}")
+    public ResponseEntity<ProductResponseDTO> getAdminProduct(@PathVariable String productId) {
+        ProductResponseDTO productResponseDTO = productService.getAdminProduct(productId);
         return new ResponseEntity<>(productResponseDTO, HttpStatus.OK);
     }
 
