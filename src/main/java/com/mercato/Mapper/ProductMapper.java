@@ -36,8 +36,10 @@ public class ProductMapper {
     }
 
     private String constructImageUrl(String imagePath) {
-        if (imagePath == null || imagePath.isEmpty() || imagePath.equals(placeholderImageUrl))
+        if (imagePath == null || imagePath.isEmpty())
             return placeholderImageUrl;
+        if (imagePath.startsWith("http://") || imagePath.startsWith("https://"))
+            return imagePath;
         return imageBaseUrl.endsWith("/")
                 ? imageBaseUrl + imagePath
                 : imageBaseUrl + "/" + imagePath;
