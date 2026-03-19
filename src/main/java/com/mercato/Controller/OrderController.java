@@ -49,9 +49,9 @@ public class OrderController {
         return ResponseEntity.ok(new PaymentRetryResponseDTO(paymentSessionId));
     }
 
-    @PostMapping("/orders/{orderId}/verify-payment")
-    public ResponseEntity<String> verifyPayment(@PathVariable String orderId) {
-        return ResponseEntity.ok(cashfreeService.verifyAndSyncPayment(orderId));
+    @PostMapping("/orders/{orderId}/sync-payment-refund")
+    public ResponseEntity<String> syncPaymentAndRefund(@PathVariable String orderId) {
+        return ResponseEntity.ok(cashfreeService.syncPaymentAndRefund(orderId));
     }
 
     @GetMapping("/admin/orders")

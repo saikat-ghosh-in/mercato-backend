@@ -18,7 +18,7 @@ public interface CashfreeService {
 
     String retryPayment(Order order, EcommUser user);
 
-    String verifyAndSyncPayment(String orderId);
+    String syncPaymentAndRefund(String orderId);
 
     String initiateRefund(Order order, Refund refund);
 }

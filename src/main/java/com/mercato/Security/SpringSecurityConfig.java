@@ -67,6 +67,9 @@ public class SpringSecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.cors(AbstractHttpConfigurer::disable)
                 .csrf(AbstractHttpConfigurer::disable)
+                .authenticationProvider(authenticationProvider())
+                .addFilterBefore(guestTokenFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(
@@ -82,10 +85,7 @@ public class SpringSecurityConfig {
                                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                                 .requestMatchers("/api/public/cashfree/webhook").permitAll()
                                 .anyRequest().authenticated()
-                )
-                .authenticationProvider(authenticationProvider())
-                .addFilterBefore(guestTokenFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
+                );
 
         return http.build();
     }

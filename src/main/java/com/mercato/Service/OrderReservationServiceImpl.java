@@ -55,23 +55,25 @@ public class OrderReservationServiceImpl implements OrderReservationService {
     public void settleQty(OrderLine orderLine, int qty, OrderLineAction action) {
         OrderReservation reservation = orderReservationRepository
                 .findByOrderLine_Id(orderLine.getId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "OrderReservation", "orderLineId", String.valueOf(orderLine.getId())
-                ));
+                .orElse(null);
 
-        Product product = productRepository.findByProductIdForUpdate(
-                        reservation.getProduct().getProductId()
-                )
+        Product product = productRepository.findByProductIdForUpdate(orderLine.getProductId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Product", "productId", reservation.getProduct().getProductId()
+                        "Product", "productId", orderLine.getProductId()
                 ));
 
         switch (action) {
             case SHIP -> {
                 product.adjustInventory(-qty);
-                product.decreaseReservedQty(qty);
+                if (reservation != null) {
+                    product.decreaseReservedQty(qty);
+                }
             }
-            case CANCEL -> product.decreaseReservedQty(qty);
+            case CANCEL -> {
+                if (reservation != null) {
+                    product.decreaseReservedQty(qty);
+                }
+            }
             default -> throw new IllegalStateException(
                     "Cannot settle qty for action: " + action
             );
@@ -79,11 +81,13 @@ public class OrderReservationServiceImpl implements OrderReservationService {
 
         productRepository.save(product);
 
-        if (orderLine.isTerminal()) {
-            orderReservationRepository.delete(reservation);
-        } else {
-            reservation.setReservedQty(reservation.getReservedQty() - qty);
-            orderReservationRepository.save(reservation);
+        if (reservation != null) {
+            if (orderLine.isTerminal()) {
+                orderReservationRepository.delete(reservation);
+            } else {
+                reservation.setReservedQty(reservation.getReservedQty() - qty);
+                orderReservationRepository.save(reservation);
+            }
         }
     }
 }

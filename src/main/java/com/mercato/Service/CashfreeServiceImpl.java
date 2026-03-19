@@ -175,19 +175,12 @@ public class CashfreeServiceImpl implements CashfreeService {
 
     @Override
     @Transactional
-    public String verifyAndSyncPayment(String orderId) {
+    public String syncPaymentAndRefund(String orderId) {
         Payment payment = paymentRepository.findByOrder_OrderId(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment", "orderId", orderId));
 
         Order order = orderRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "orderId", orderId));
-
-        if (PaymentStatus.SUCCESS.equals(payment.getStatus())) {
-            log.info("Payment already confirmed for orderId={}, syncing refund", orderId);
-            orderReservationService.reserveForOrder(order);
-            syncRefund(orderId, payment);
-            return "Payment already confirmed, refund status synced";
-        }
 
         try {
             ResponseEntity<String> response = restTemplate.exchange(
@@ -200,10 +193,9 @@ public class CashfreeServiceImpl implements CashfreeService {
             JsonNode json = objectMapper.readTree(response.getBody());
 
             if (!json.isArray() || json.isEmpty()) {
-                log.warn("No payment attempts found for orderId={}, falling back to order sync", orderId);
-                syncOrderStatus(order, payment);
+                log.warn("No payment attempts found for orderId={}, syncing refund only", orderId);
                 syncRefund(orderId, payment);
-                return "No payment attempts found, order status synced";
+                return "No payment attempts found, refund status synced";
             }
 
             JsonNode latestAttempt = json.get(0);
@@ -220,23 +212,19 @@ public class CashfreeServiceImpl implements CashfreeService {
                     payment.setGatewayReference(cfPaymentId);
                     payment.setGatewayResponseMessage("Payment verified via polling");
                     payment.setPaymentMethod(resolvePaymentMethod(paymentGroup));
-                    payment.setCompletedAt(Instant.now());
+                    if (payment.getCompletedAt() == null) payment.setCompletedAt(Instant.now());
                     paymentRepository.save(payment);
 
-                    order.confirmOrder();
-                    recordConfirmationTransitions(order);
-                    orderReservationService.reserveForOrder(order);
-                    orderRepository.save(order);
-
                     log.info("Payment synced to SUCCESS for orderId={}", orderId);
-                    yield "Payment confirmed successfully";
+                    yield "Payment synced successfully";
                 }
                 case "FAILED" -> {
                     payment.setStatus(PaymentStatus.FAILED);
                     payment.setGatewayReference(cfPaymentId);
                     payment.setGatewayResponseMessage(message);
-                    payment.setCompletedAt(Instant.now());
+                    if (payment.getCompletedAt() == null) payment.setCompletedAt(Instant.now());
                     paymentRepository.save(payment);
+
                     log.warn("Payment synced to FAILED for orderId={}", orderId);
                     yield "Payment has failed";
                 }
@@ -245,10 +233,14 @@ public class CashfreeServiceImpl implements CashfreeService {
                     payment.setGatewayReference(cfPaymentId);
                     payment.setGatewayResponseMessage("User dropped payment");
                     paymentRepository.save(payment);
+
                     log.warn("Payment synced to USER_DROPPED for orderId={}", orderId);
                     yield "Payment was dropped by user";
                 }
                 case "PENDING" -> {
+                    payment.setStatus(PaymentStatus.PENDING);
+                    paymentRepository.save(payment);
+
                     log.info("Payment still PENDING for orderId={}", orderId);
                     yield "Payment is still pending";
                 }
@@ -261,9 +253,10 @@ public class CashfreeServiceImpl implements CashfreeService {
             syncOrderStatus(order, payment);
             syncRefund(orderId, payment);
             return result;
+
         } catch (Exception e) {
-            log.error("Failed to verify payment for orderId={}: {}", orderId, e.getMessage());
-            throw new CustomBadRequestException("Payment verification failed: " + e.getMessage());
+            log.error("Failed to sync payment for orderId={}: {}", orderId, e.getMessage());
+            throw new CustomBadRequestException("Payment sync failed: " + e.getMessage());
         }
     }
 

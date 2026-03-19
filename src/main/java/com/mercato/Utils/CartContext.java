@@ -19,7 +19,8 @@ public record CartContext(String userId, String guestToken) {
             return new CartContext(userDetails.getUserId(), null);
         }
 
-        return new CartContext(null, JwtUtils.extractGuestToken(request));
+        String guestToken = JwtUtils.extractGuestToken(request);
+        return new CartContext(null, guestToken);
     }
 
     public boolean isGuest() {

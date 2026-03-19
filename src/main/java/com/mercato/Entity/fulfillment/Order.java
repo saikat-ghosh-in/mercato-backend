@@ -5,6 +5,7 @@ import com.mercato.Entity.fulfillment.payment.PaymentStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -31,6 +32,7 @@ import java.util.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Slf4j
 public class Order {
 
     @Id
@@ -128,9 +130,8 @@ public class Order {
 
     public void confirmOrder() {
         if (this.orderStatus != OrderStatus.CREATED) {
-            throw new IllegalStateException(
-                    "Cannot confirm order in status: " + this.orderStatus
-            );
+            log.warn("Cannot confirm order in status: {}", this.orderStatus);
+            return;
         }
         this.orderStatus = OrderStatus.CONFIRMED;
         this.paymentStatus = PaymentStatus.SUCCESS;
