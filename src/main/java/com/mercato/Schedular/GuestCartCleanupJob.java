@@ -18,7 +18,7 @@ public class GuestCartCleanupJob {
     @Scheduled(cron = "0 0 2 * * *", zone = "UTC")
     @Transactional
     public void purgeAbandonedGuestCarts() {
-        Instant cutoff = Instant.now().minus(30, ChronoUnit.DAYS);
+        Instant cutoff = Instant.now().minus(8, ChronoUnit.DAYS);
         cartRepository.deleteStaleGuestCarts(cutoff);
     }
 }

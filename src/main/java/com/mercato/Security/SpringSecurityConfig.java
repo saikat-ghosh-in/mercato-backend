@@ -68,8 +68,8 @@ public class SpringSecurityConfig {
         http.cors(AbstractHttpConfigurer::disable)
                 .csrf(AbstractHttpConfigurer::disable)
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(guestTokenFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(guestTokenFilter, AuthTokenFilter.class)
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(

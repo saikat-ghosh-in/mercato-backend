@@ -19,8 +19,6 @@ public class GuestTokenFilter extends OncePerRequestFilter {
 
     private final JwtUtils jwtUtils;
 
-    private static final String GUEST_TOKEN_COOKIE = "guest_token";
-
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
@@ -28,10 +26,14 @@ public class GuestTokenFilter extends OncePerRequestFilter {
 
         String existingToken = JwtUtils.extractGuestToken(request);
 
-        if (existingToken == null && jwtUtils.extractJwt(request) == null) {
-            ResponseCookie cookie = jwtUtils.generateGuestTokenCookie();
-            response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-            request.setAttribute(GUEST_TOKEN_COOKIE, cookie.getValue());
+        if (jwtUtils.extractJwt(request) == null) {
+            if (existingToken == null || !jwtUtils.validateGuestToken(existingToken)) {
+                String newGuestToken = jwtUtils.generateGuestTokenValue();
+                request.setAttribute(JwtUtils.GUEST_TOKEN_ATTRIBUTE, newGuestToken);
+
+                ResponseCookie cookie = jwtUtils.createGuestTokenCookie(newGuestToken);
+                response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+            }
         }
 
         chain.doFilter(request, response);
