@@ -11,7 +11,6 @@ public class CartMapper {
         if (cart == null) return null;
         return new CartResponseDTO(
                 cart.getCartId(),
-                cart.getUser().getUserId(),
                 cart.getSubtotal(),
                 cart.getCharges().stream()
                         .map(charge -> new CartChargeResponseDTO(
