@@ -10,6 +10,7 @@ import java.util.List;
 @AllArgsConstructor
 public class CartResponseDTO {
     private final String cartId;
+    private final String userId;
     private final BigDecimal subtotal;
     private final List<CartChargeResponseDTO> charges;
     private final BigDecimal totalCharges;

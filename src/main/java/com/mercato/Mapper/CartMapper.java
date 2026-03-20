@@ -5,14 +5,13 @@ import com.mercato.Payloads.Response.CartChargeResponseDTO;
 import com.mercato.Payloads.Response.CartItemResponseDTO;
 import com.mercato.Payloads.Response.CartResponseDTO;
 
-import java.util.List;
-
 public class CartMapper {
 
     public static CartResponseDTO toDto(Cart cart) {
         if (cart == null) return null;
         return new CartResponseDTO(
                 cart.getCartId(),
+                cart.getUser().getUserId(),
                 cart.getSubtotal(),
                 cart.getCharges().stream()
                         .map(charge -> new CartChargeResponseDTO(
