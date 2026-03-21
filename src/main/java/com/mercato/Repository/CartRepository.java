@@ -26,4 +26,6 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
             AND c.updatedAt < :cutoff
             """)
     void deleteStaleGuestCarts(Instant cutoff);
+
+    void deleteByUserId(Long userId);
 }

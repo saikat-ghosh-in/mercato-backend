@@ -108,7 +108,7 @@ public class OrderController {
     }
 
     @PostMapping("/order-line/update")
-    public ResponseEntity<OrderLineResponseDTO> updateOrderLine(@RequestBody @Valid OrderLineUpdateRequestDTO request) {
+    public ResponseEntity<OrderLineResponseDTO> updateOrderLine(@RequestBody OrderLineUpdateRequestDTO request) {
         TransitionTrigger trigger = authUtil.resolveTransitionTrigger();
         OrderLineResponseDTO response = orderLineUpdateService.updateOrderLine(request, trigger);
         return ResponseEntity.ok(response);

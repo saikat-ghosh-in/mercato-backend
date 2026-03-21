@@ -8,7 +8,6 @@ import lombok.Getter;
 public class AddressResponseDTO {
     private final String addressId;
     private final String userId;
-    private final String userName;
     private final String recipientName;
     private final String recipientPhone;
     private final String addressLine1;

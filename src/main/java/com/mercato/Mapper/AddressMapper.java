@@ -9,7 +9,6 @@ public class AddressMapper {
         return new AddressResponseDTO(
                 address.getAddressId(),
                 address.getUser().getUserId(),
-                address.getUser().getUsername(),
                 address.getRecipientName(),
                 address.getRecipientPhone(),
                 address.getAddressLine1(),

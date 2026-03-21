@@ -6,8 +6,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -18,22 +18,32 @@ import java.io.IOException;
 public class GuestTokenFilter extends OncePerRequestFilter {
 
     private final JwtUtils jwtUtils;
+    private static final Logger logger = LoggerFactory.getLogger(GuestTokenFilter.class);
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain chain) throws ServletException, IOException {
 
-        String existingToken = JwtUtils.extractGuestToken(request);
+        String existingToken = jwtUtils.extractJwt(request);
 
-        if (jwtUtils.extractJwt(request) == null) {
-            if (existingToken == null || !jwtUtils.validateGuestToken(existingToken)) {
-                String newGuestToken = jwtUtils.generateGuestTokenValue();
-                request.setAttribute(JwtUtils.GUEST_TOKEN_ATTRIBUTE, newGuestToken);
+        if (existingToken == null) {
+            logger.debug("No token found, generating guest token");
+            String newGuestToken = jwtUtils.generateGuestTokenValue();
+            response.setHeader("X-Guest-Token", newGuestToken);
+            request.setAttribute(JwtUtils.GUEST_TOKEN_ATTRIBUTE, newGuestToken);
+        } else if (jwtUtils.validateJwtToken(existingToken)) {
+            String tokenType = jwtUtils.getClaimFromToken(existingToken, "type");
 
-                ResponseCookie cookie = jwtUtils.createGuestTokenCookie(newGuestToken);
-                response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+            if ("guest".equals(tokenType)) {
+                request.setAttribute(JwtUtils.GUEST_TOKEN_ATTRIBUTE, existingToken);
             }
+        } else {
+            logger.debug("Invalid token found, generating new guest token");
+            String newGuestToken = jwtUtils.generateGuestTokenValue();
+
+            response.setHeader("X-Guest-Token", newGuestToken);
+            request.setAttribute(JwtUtils.GUEST_TOKEN_ATTRIBUTE, newGuestToken);
         }
 
         chain.doFilter(request, response);

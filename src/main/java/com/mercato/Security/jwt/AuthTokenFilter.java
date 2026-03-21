@@ -31,15 +31,20 @@ public class AuthTokenFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
             throws ServletException, IOException {
         logger.debug("AuthTokenFilter called for URI: {}", request.getRequestURI());
+
         try {
             String jwt = jwtUtils.extractJwt(request);
+
             if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
-                if ("guest".equals(jwtUtils.getClaimFromToken(jwt, "type"))) {
+                String tokenType = jwtUtils.getClaimFromToken(jwt, "type");
+
+                if ("guest".equals(tokenType)) {
+                    request.setAttribute(JwtUtils.GUEST_TOKEN_ATTRIBUTE, jwt);
                     filterChain.doFilter(request, response);
                     return;
                 }
-                String username = jwtUtils.getUserNameFromJwtToken(jwt);
 
+                String username = jwtUtils.getUserNameFromJwtToken(jwt);
                 UserDetailsImpl userDetails = userDetailsServiceImpl.loadUserByUsername(username);
 
                 UsernamePasswordAuthenticationToken authentication =
@@ -49,7 +54,6 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                 logger.debug("Roles from JWT: {}", userDetails.getAuthorities());
 
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception e) {
@@ -59,4 +63,3 @@ public class AuthTokenFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 }
-

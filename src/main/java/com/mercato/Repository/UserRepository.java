@@ -14,13 +14,17 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<EcommUser, Long> {
 
-    Optional<EcommUser> findByUserId(String orderId);
+    Optional<EcommUser> findByUserId(String userId);
 
     Optional<EcommUser> findByUsername(String username);
+
+    Optional<EcommUser> findByEmail(String email);
 
     boolean existsByUsername(String username);
 
     boolean existsByEmail(String email);
+
+    boolean existsByPhoneNumber(String phoneNumber);
 
     @Query("SELECT DISTINCT u FROM EcommUser u JOIN u.roles r WHERE r.roleName IN :roleNames")
     List<EcommUser> findUsersByRoleNames(@Param("roleNames") List<AppRole> roleNames);
@@ -30,4 +34,8 @@ public interface UserRepository extends JpaRepository<EcommUser, Long> {
 
     @Query("SELECT COUNT(u) FROM EcommUser u WHERE u.createdAt BETWEEN :start AND :end")
     long countByCreatedAtBetween(@Param("start") Instant start, @Param("end") Instant end);
+
+    List<EcommUser> findByEnabledFalseAndDeactivatedAtIsNull();
+
+    List<EcommUser> findByEnabledFalseAndDeactivatedAtBefore(Instant cutoffDate);
 }

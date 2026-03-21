@@ -7,5 +7,6 @@ import com.mercato.Payloads.Response.OrderLineResponseDTO;
 import jakarta.validation.Valid;
 
 public interface OrderLineUpdateService {
+
     OrderLineResponseDTO updateOrderLine(@Valid OrderLineUpdateRequestDTO request, TransitionTrigger trigger);
 }

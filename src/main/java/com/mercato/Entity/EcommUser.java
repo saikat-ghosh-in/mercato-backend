@@ -77,10 +77,6 @@ public class EcommUser {
     @Column(name = "profile_image_url")
     private String profileImageUrl;
 
-    /**
-     * Set to true at registration.
-     * Flip to false only if email verification or account suspension is implemented.
-     */
     @Builder.Default
     @Column(nullable = false)
     private boolean enabled = true;
@@ -99,6 +95,9 @@ public class EcommUser {
 
     @Column(name = "last_login_at")
     private Instant lastLoginAt;
+
+    @Column(name = "deactivated_at")
+    private Instant deactivatedAt;
 
     @Size(max = 100)
     @Column(name = "seller_display_name", length = 100)

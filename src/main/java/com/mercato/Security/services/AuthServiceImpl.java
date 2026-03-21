@@ -5,6 +5,7 @@ import com.mercato.Entity.EcommUser;
 import com.mercato.Entity.Role;
 import com.mercato.ExceptionHandler.ResourceAlreadyExistsException;
 import com.mercato.ExceptionHandler.ResourceNotFoundException;
+import com.mercato.Mapper.EcommUserMapper;
 import com.mercato.Payloads.Response.EcommUserResponseDTO;
 import com.mercato.Repository.RoleRepository;
 import com.mercato.Repository.UserRepository;
@@ -13,17 +14,19 @@ import com.mercato.Security.payloads.LoginRequest;
 import com.mercato.Security.payloads.RegisterUserRequest;
 import com.mercato.Security.payloads.UserInfoResponse;
 import com.mercato.Service.CartService;
+import com.mercato.Service.EmailService;
+import com.mercato.Service.EmailVerificationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -36,10 +39,10 @@ import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthServiceImpl implements AuthService {
 
     private final JwtUtils jwtUtils;
@@ -47,6 +50,8 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder encoder;
+    private final EmailVerificationService emailVerificationService;
+    private final EmailService emailService;
 
     private CartService cartService;
 
@@ -60,6 +65,25 @@ public class AuthServiceImpl implements AuthService {
     public ResponseEntity<UserInfoResponse> authenticateUser(LoginRequest loginRequest,
                                                              HttpServletRequest request,
                                                              HttpServletResponse httpServletResponse) {
+        EcommUser user = userRepository.findByUsername(loginRequest.getUsername())
+                .orElseThrow(() -> new ResourceNotFoundException("User", "username", loginRequest.getUsername()));
+
+        if (!user.isEmailVerified()) {
+            throw new DisabledException("Email not verified. Please check your email and verify your account.");
+        }
+
+        if (user.isAccountLocked()) {
+            throw new DisabledException("Account is locked. Please contact support.");
+        }
+
+        if (!user.isEnabled() && user.getDeactivatedAt() != null) {
+            user.setEnabled(true);
+            user.setDeactivatedAt(null);
+            userRepository.save(user);
+            log.info("User {} auto-reactivated on login", user.getUsername());
+            emailService.sendReactivationConfirmationEmail(user.getEmail(), user.getFirstName());
+        }
+
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         loginRequest.getUsername(),
@@ -69,21 +93,15 @@ public class AuthServiceImpl implements AuthService {
         SecurityContextHolder.getContext().setAuthentication(authentication);
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
-        EcommUser user = userRepository.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
         user.setLastLoginAt(Instant.now());
         userRepository.save(user);
 
         String guestToken = JwtUtils.extractGuestToken(request);
         if (guestToken != null) {
             cartService.mergeGuestCartOnLogin(userDetails.getUserId(), guestToken);
-
-            ResponseCookie cleanGuestTokenCookie = jwtUtils.getCleanGuestTokenCookie();
-            httpServletResponse.addHeader(HttpHeaders.SET_COOKIE, cleanGuestTokenCookie.toString());
         }
 
-        ResponseCookie jwtCookie = jwtUtils.generateJwtCookie(userDetails);
-        String jwt = jwtCookie.getValue();
+        String jwt = jwtUtils.generateJwtToken(userDetails);
 
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -98,9 +116,7 @@ public class AuthServiceImpl implements AuthService {
                 .roles(roles)
                 .build();
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-                .body(response);
+        return ResponseEntity.ok(response);
     }
 
     @Override
@@ -117,7 +133,7 @@ public class AuthServiceImpl implements AuthService {
                 .phoneNumber(registerUserRequest.getPhoneNumber())
                 .profileImageUrl("placeholder")
                 .enabled(true)
-                .emailVerified(true)
+                .emailVerified(false)
                 .build();
 
         Set<Role> roles = new HashSet<>();
@@ -125,30 +141,12 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
         roles.add(userRole);
         user.setRoles(roles);
-        userRepository.save(user);
 
-        return "User registered successfully!";
-    }
+        EcommUser savedUser = userRepository.save(user);
 
-    @Override
-    @Transactional
-    public void updateUserRoles(String userId, Set<String> roleNames) {
-        EcommUser user = userRepository.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        emailVerificationService.createAndSendVerificationToken(savedUser);
 
-        Set<Role> newRoles = new HashSet<>();
-        for (String roleName : roleNames) {
-            AppRole appRole;
-            try {
-                appRole = AppRole.valueOf(roleName);
-            } catch (IllegalArgumentException e) {
-                throw new RuntimeException("Invalid role: " + roleName);
-            }
-            Role role = roleRepository.findByRoleName(appRole)
-                    .orElseThrow(() -> new RuntimeException("Role not found in DB: " + roleName));
-            newRoles.add(role);
-        }
-        user.setRoles(newRoles);
+        return "User registered successfully! Please check your email to verify your account.";
     }
 
     @Override
@@ -172,36 +170,15 @@ public class AuthServiceImpl implements AuthService {
         if (!(principal instanceof UserDetailsImpl userDetails)) {
             throw new IllegalStateException("Unexpected principal type: " + principal.getClass());
         }
-        List<String> roles = userDetails.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.toList());
-        EcommUser user = getUserByUserId(userDetails.getUserId());
 
-        return new EcommUserResponseDTO(
-                user.getUserId(),
-                user.getUsername(),
-                user.getFirstName(),
-                user.getLastName(),
-                user.getEmail(),
-                user.getPhoneNumber(),
-                user.getProfileImageUrl(),
-                user.isEnabled(),
-                user.isAccountLocked(),
-                user.isEmailVerified(),
-                user.getCreatedAt(),
-                user.getLastLoginAt(),
-                user.isSeller(),
-                user.getSellerDisplayName(),
-                roles
-        );
+        EcommUser user = getUserByUserId(userDetails.getUserId());
+        return EcommUserMapper.toDto(user);
     }
 
     @Override
     public ResponseEntity<?> signOutCurrentUser() {
-        ResponseCookie cleanCookie = jwtUtils.getCleanJwtCookie();
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cleanCookie.toString())
-                .body("You have been signed out!");
+        SecurityContextHolder.clearContext();
+        return ResponseEntity.ok("You have been signed out!");
     }
 
     private EcommUser getUserByUserId(String userId) {

@@ -25,6 +25,7 @@ public class EcommUserMapper {
                 user.isEmailVerified(),
                 user.getCreatedAt(),
                 user.getLastLoginAt(),
+                user.getDeactivatedAt(),
                 user.isSeller(),
                 user.getSellerDisplayName(),
                 roles

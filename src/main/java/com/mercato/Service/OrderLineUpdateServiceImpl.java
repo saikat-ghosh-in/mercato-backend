@@ -11,9 +11,11 @@ import com.mercato.Payloads.Response.OrderLineResponseDTO;
 import com.mercato.Repository.OrderLineRepository;
 import com.mercato.Repository.OrderRepository;
 import com.mercato.Utils.AuthUtil;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 
 import java.text.MessageFormat;
 import java.time.Instant;
@@ -31,7 +33,8 @@ public class OrderLineUpdateServiceImpl implements OrderLineUpdateService {
 
     @Override
     @Transactional
-    public OrderLineResponseDTO updateOrderLine(OrderLineUpdateRequestDTO request, TransitionTrigger trigger) {
+    @Validated
+    public OrderLineResponseDTO updateOrderLine(@Valid OrderLineUpdateRequestDTO request, TransitionTrigger trigger) {
 
         OrderLine orderLine = orderLineRepository
                 .findByFulfillmentIdAndOrderLineNumberForUpdate(

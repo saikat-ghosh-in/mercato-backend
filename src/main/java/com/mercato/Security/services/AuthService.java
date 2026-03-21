@@ -9,9 +9,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.AuthenticationException;
 
-import java.util.Set;
-
 public interface AuthService {
+
     ResponseEntity<UserInfoResponse> authenticateUser(LoginRequest loginRequest, HttpServletRequest request, HttpServletResponse httpServletResponse) throws AuthenticationException;
 
     String registerNewUser(RegisterUserRequest registerUserRequest);
@@ -19,8 +18,6 @@ public interface AuthService {
     String getCurrentUsernameFromAuthentication();
 
     EcommUserResponseDTO getCurrentUserFromAuthentication();
-
-    void updateUserRoles(String userId, Set<String> roles);
 
     ResponseEntity<?> signOutCurrentUser();
 }

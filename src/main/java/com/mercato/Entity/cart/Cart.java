@@ -2,10 +2,10 @@ package com.mercato.Entity.cart;
 
 import com.mercato.Entity.*;
 import jakarta.persistence.*;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Table;
 import lombok.*;
-import org.hibernate.annotations.BatchSize;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.*;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -38,6 +38,7 @@ public class Cart {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_fk", referencedColumnName = "id")
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private EcommUser user;
 
     @Column(name = "guest_token", unique = true)

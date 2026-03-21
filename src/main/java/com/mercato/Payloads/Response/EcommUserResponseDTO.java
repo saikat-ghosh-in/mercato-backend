@@ -21,6 +21,7 @@ public class EcommUserResponseDTO {
     private final boolean emailVerified;
     private final Instant createdAt;
     private final Instant lastLoginAt;
+    private final Instant deactivatedAt;
     private final boolean isSeller;
     private final String sellerDisplayName;
     private final List<String> roles;
